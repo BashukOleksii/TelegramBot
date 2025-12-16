@@ -35,13 +35,13 @@ namespace TelegramBot_MinimalAPI
                 return;
 
             if (text.ToLower() == "/start")
-                await HandleComandStart(message.Chat.Id);
+                await HandleCommandStart(message.Chat.Id);
             
 
             
         }
 
-        public async Task HandleComandStart(long chatID)
+        public async Task HandleCommandStart(long chatID)
         {
             var keyBoard = new ReplyKeyboardMarkup(new[]
             {
@@ -62,12 +62,10 @@ namespace TelegramBot_MinimalAPI
             })
             {
                 ResizeKeyboard = true ,
-                OneTimeKeyboard = true, IsPersistent = true 
-
+                OneTimeKeyboard = true
             };
       
-            await _client.SendMessage(chatID, "Привіт, вибери дію", replyMarkup: keyBoard
-            );
+            await _client.SendMessage(chatID, "Привіт, вибери дію", replyMarkup: keyBoard);
         }
 
         #endregion
