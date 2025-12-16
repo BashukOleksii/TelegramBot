@@ -33,9 +33,14 @@ namespace TelegramBot_MinimalAPI
 
             if (text is null)
                 return;
-
-            if (text.ToLower() == "/start")
-                await HandleCommandStart(message.Chat.Id);
+            switch (text.ToLower())
+            {
+                case "/start":
+                    await HandleCommandStart(message.Chat.Id);
+                break;
+                case "Налаштування":
+                    break;
+            }
             
 
             
@@ -47,9 +52,8 @@ namespace TelegramBot_MinimalAPI
             {
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("Поточна погода"),
+                    new KeyboardButton("Загальна + поточна погода"),
                     new KeyboardButton("Погодинна погода"),
-                    new KeyboardButton("Поденна погода")
                 },
                 new KeyboardButton[]
                 {
