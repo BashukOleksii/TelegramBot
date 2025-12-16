@@ -4,7 +4,7 @@ using Telegram.Bot.Types;
 var builder = WebApplication.CreateBuilder(args);
 
 
-var botToken = Environment.GetEnvironmentVariable("BOT_TOKEN");
+var botToken = "8481914772:AAHaSlwTaRZd7yXMo6nu_DYcrXOW0JnARKk"; //Environment.GetEnvironmentVariable("BOT_TOKEN");
 
 if (string.IsNullOrWhiteSpace(botToken))
     throw new Exception("Токен не отриманий");
@@ -13,8 +13,8 @@ builder.Services.AddSingleton(new TelegramBotClient(botToken));
 
 var app = builder.Build();
 
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-app.Urls.Add($"http://0.0.0.0:{port}");
+//var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+//app.Urls.Add($"http://0.0.0.0:{port}");
 
 app.MapPost("/telegram/update", async (Update update, TelegramBotClient botClient) =>
 {
