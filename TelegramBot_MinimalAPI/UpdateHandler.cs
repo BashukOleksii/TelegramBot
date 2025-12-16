@@ -38,7 +38,11 @@ namespace TelegramBot_MinimalAPI
                 case "/start":
                     await HandleCommandStart(message.Chat.Id);
                 break;
-                case "Налаштування":
+                case "налаштування":
+                    await HandleSettingButton(message.Chat.Id);
+                    break;
+                case "<-- назад":
+                    await HandleCommandStart(message.Chat.Id);
                     break;
             }
             
@@ -70,6 +74,34 @@ namespace TelegramBot_MinimalAPI
             };
       
             await _client.SendMessage(chatID, "Привіт, вибери дію", replyMarkup: keyBoard);
+        }
+
+        public async Task HandleSettingButton(long chatID)
+        {
+            var keyBoard = new ReplyKeyboardMarkup(new List<KeyboardButton[]>
+            {
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Користувацькі налаштування")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Поточна погода"),
+                    new KeyboardButton("Погодинна погода"),
+                    new KeyboardButton("Поденна погода")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("<-- Назад")
+                }
+
+            })
+            {
+                ResizeKeyboard = true,
+                OneTimeKeyboard = true
+            };
+
+            await _client.SendMessage(chatID, "Виберіть, що саме налаштувати", replyMarkup: keyBoard);
         }
 
         #endregion

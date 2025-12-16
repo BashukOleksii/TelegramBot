@@ -3,6 +3,9 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using TelegramBot_MinimalAPI;
 using TelegramBot_MinimalAPI.MongoDB.Repository.Interfaces;
+using TelegramBot_MinimalAPI.MongoDB.Repository.Realizations;
+using TelegramBot_MinimalAPI.MongoDB.Service.Interfaces;
+using TelegramBot_MinimalAPI.MongoDB.Service.Realizations;
 var builder = WebApplication.CreateBuilder(args);
 
 #region DI
@@ -21,7 +24,8 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
     var client = sp.GetRequiredService<MongoClient>();
     return client.GetDatabase("Setting");
 });
-builder.Services.AddSingleton<ISettingRepository>();
+builder.Services.AddSingleton<ISettingRepository, SettingRepository>();
+builder.Services.AddSingleton<ISettingService, SettingService>();
 #endregion
 
 #region UpdateHandler
