@@ -17,7 +17,8 @@ builder.Services.AddSingleton(new TelegramBotClient(botToken));
 #endregion
 
 #region MongoDB
-var connectionString = "mongodb+srv://bashuk0325oleksij_db_user:lZHXFstos2k8lAMX@data.t7bzerb.mongodb.net/?appName=Data";
+var connectionString = "mongodb+srv://bashuk0325oleksij_db_user:lZHXFstos2k8lAMX@data.t7bzerb.mongodb.net/?retryWrites=true&w=majority&appName=Data";
+                  
 builder.Services.AddSingleton(new MongoClient(connectionString));
 builder.Services.AddSingleton<IMongoDatabase>(sp =>
 {

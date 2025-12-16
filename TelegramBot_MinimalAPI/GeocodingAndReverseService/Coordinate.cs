@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace TelegramBot_MinimalAPI.GeocodingService
+namespace TelegramBot_MinimalAPI.GeocodingAndReverseService
 {
     public class Coordinate
     {

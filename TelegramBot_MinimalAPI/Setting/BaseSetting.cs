@@ -1,9 +1,12 @@
-﻿using MongoDB.Bson.Serialization.Attributes;
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.IdGenerators;
 
 namespace TelegramBot_MinimalAPI.Setting
 {
     public class BaseSetting
     {
+        [BsonRepresentation(BsonType.ObjectId)] public string _id { get; set; } 
         [BsonElement("userId")] public long userId { get; set; }
         [BsonElement("latitude")] public float Latitude { get; set; }
         [BsonElement("longitude")] public float Longtitude { get; set; }

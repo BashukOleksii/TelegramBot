@@ -27,7 +27,7 @@ namespace TelegramBot_MinimalAPI.MongoDB.Service.Realizations
             }
         }
 
-        public async Task<BaseSetting> GetSettingAsync(long userId,float lat, float lon)
+        public async Task<BaseSetting?> GetSettingAsync(long userId,float lat, float lon)
         {
             try
             {
@@ -43,9 +43,10 @@ namespace TelegramBot_MinimalAPI.MongoDB.Service.Realizations
                 return setting;
 
             }
-            catch
+            catch(Exception ex)
             {
-                return null!;
+                Console.WriteLine($"Помилка отримання: {ex.Message}, userId: {userId}");
+                return null;
             }
         }
 

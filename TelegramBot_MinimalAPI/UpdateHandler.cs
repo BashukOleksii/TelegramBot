@@ -3,16 +3,27 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using TelegramBot_MinimalAPI.GeocodingAndReverseService;
+using TelegramBot_MinimalAPI.MongoDB.Service.Interfaces;
 
 namespace TelegramBot_MinimalAPI
 {
+    
     public class UpdateHandler
     {
         private readonly TelegramBotClient _client;
+        private readonly ISettingService _settingService;
+        private readonly HttpClient _httpClient;
+        private readonly GeocodingServise _geocodingService;
 
-        public UpdateHandler(TelegramBotClient client)
+
+        public UpdateHandler(TelegramBotClient client, ISettingService settingService)
         {
             _client = client;
+            _settingService = settingService;
+            _httpClient = new HttpClient();
+            _geocodingService = new GeocodingServise(_httpClient);
+
         }
 
         public async Task HandleUpdate(Update update)
@@ -44,13 +55,16 @@ namespace TelegramBot_MinimalAPI
                 case "<-- назад":
                     await HandleCommandStart(message.Chat.Id);
                     break;
+                case "користувацькі налаштування":
+                    await HandleUserSettingButton(message);
+                break;
             }
             
 
             
         }
 
-        public async Task HandleCommandStart(long chatID)
+        private async Task HandleCommandStart(long chatID)
         {
             var keyBoard = new ReplyKeyboardMarkup(new[]
             {
@@ -76,7 +90,7 @@ namespace TelegramBot_MinimalAPI
             await _client.SendMessage(chatID, "Привіт, вибери дію", replyMarkup: keyBoard);
         }
 
-        public async Task HandleSettingButton(long chatID)
+        private async Task HandleSettingButton(long chatID)
         {
             var keyBoard = new ReplyKeyboardMarkup(new List<KeyboardButton[]>
             {
@@ -103,6 +117,55 @@ namespace TelegramBot_MinimalAPI
 
             await _client.SendMessage(chatID, "Виберіть, що саме налаштувати", replyMarkup: keyBoard);
         }
+
+        private async Task HandleUserSettingButton(Message message)
+        {
+            float lat = (float)50.45466, lon = (float)30.5238;
+
+            if (message.Location!= null)
+            {
+                lat = (float)message.Location.Latitude;
+                lon = (float)message.Location.Longitude;
+            }
+
+            var setting = await _settingService.GetSettingAsync(message.From.Id, lat, lon);
+
+            if(setting is null)
+            {
+                await _client.SendMessage(message.Chat.Id, "Помилка отримання інформації");
+                return;
+            }
+
+            var city = await _geocodingService.GetNameAsync(setting.Latitude, setting.Longtitude);
+
+            var stringAnswer = "Користовацькі налаштування:" +
+                "\nМісце відстеження: " + city +
+                "\nКількість відстеження майбутніх днів: " + setting.ForecastDays ?? "7" +
+                "\nКалькість відстеження минулих днів" + setting.PastDays ?? "0" +
+                "\nОдиниця вимірювання температури: " + setting.TempUnit ?? "°C" +
+                "\nОдиниця вимірювання швидкості: " + setting.WindSpeed ?? "kh/s" +
+                "\nБажаєте щось змінити?";
+
+            var buttons = new InlineKeyboardMarkup(new List<InlineKeyboardButton[]>
+            {
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("UserSettingCity")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("UserSettingForecat"),
+                    InlineKeyboardButton.WithCallbackData("UserSettingPast")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("UserSettingTemperature"),
+                    InlineKeyboardButton.WithCallbackData("UserSettingWind")
+                }
+            });
+            
+            await _client.SendMessage(message.Chat.Id, stringAnswer, replyMarkup: buttons);
+        } 
 
         #endregion
     }
