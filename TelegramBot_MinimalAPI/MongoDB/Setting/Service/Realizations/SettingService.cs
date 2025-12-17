@@ -54,6 +54,13 @@ namespace TelegramBot_MinimalAPI.MongoDB.Setting.Service.Realizations
         {
             try
             {
+                var setting = await _settingRepository.GetByUserIDAsync(baseSetting.userId);
+
+                if (setting is null)
+                    return false;
+
+                baseSetting._id = setting._id;
+
                 await _settingRepository.UpdateAsync(baseSetting);
                 return true;
             }
