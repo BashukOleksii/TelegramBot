@@ -2,28 +2,56 @@ using MongoDB.Driver;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using TelegramBot_MinimalAPI;
+using TelegramBot_MinimalAPI.GeocodingAndReverseService;
+using TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Interfaces;
+using TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Realizations;
+using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Interfaces;
+using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Realizations;
+using TelegramBot_MinimalAPI.MongoDB.State.Repository.Interface;
+using TelegramBot_MinimalAPI.MongoDB.State.Repository.Realization;
+using TelegramBot_MinimalAPI.MongoDB.State.Service.Interface;
+using TelegramBot_MinimalAPI.MongoDB.State.Service.Realization;
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("appsetings.Development.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
+
+Console.WriteLine(builder.Environment.EnvironmentName);
 
 #region DI
 #region BotToken
-var botToken = "8481914772:AAHaSlwTaRZd7yXMo6nu_DYcrXOW0JnARKk"; //Environment.GetEnvironmentVariable("BOT_TOKEN");
+var botToken = builder.Configuration["Telegram:BotToken"]; //Environment.GetEnvironmentVariable("BOT_TOKEN");
 if (string.IsNullOrWhiteSpace(botToken))
     throw new Exception("Токен не отриманий");
 builder.Services.AddSingleton(new TelegramBotClient(botToken));
 #endregion
 
 #region MongoDB
-var connectionString = "mongodb+srv://bashuk0325oleksij_db_user:lZHXFstos2k8lAMX@data.t7bzerb.mongodb.net/?appName=Data";
+var connectionString = builder.Configuration["MongoDB:ConnectionString"];
+                  
 builder.Services.AddSingleton(new MongoClient(connectionString));
 builder.Services.AddSingleton<IMongoDatabase>(sp =>
 {
     var client = sp.GetRequiredService<MongoClient>();
     return client.GetDatabase("Setting");
 });
+builder.Services.AddSingleton<ISettingRepository, SettingRepository>();
+builder.Services.AddSingleton<ISettingService, SettingService>();
+builder.Services.AddSingleton<IStateRepository, StateRepository>();
+builder.Services.AddSingleton<IStateService, StateService>();
 #endregion
 
 #region UpdateHandler
 builder.Services.AddSingleton<UpdateHandler>();
+builder.Services.AddHttpClient<GeocodingServise>(client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("WeatherBot/1.0 (bashuk0325oleksij@gmail.com)");
+
+    client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
+});
+
 #endregion
 
 #endregion
