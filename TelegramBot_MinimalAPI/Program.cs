@@ -7,18 +7,22 @@ using TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Interfaces;
 using TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Realizations;
 using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Interfaces;
 using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Realizations;
+using TelegramBot_MinimalAPI.MongoDB.State.Repository.Interface;
+using TelegramBot_MinimalAPI.MongoDB.State.Repository.Realization;
+using TelegramBot_MinimalAPI.MongoDB.State.Service.Interface;
+using TelegramBot_MinimalAPI.MongoDB.State.Service.Realization;
 var builder = WebApplication.CreateBuilder(args);
 
 #region DI
 #region BotToken
-var botToken = "8481914772:AAHaSlwTaRZd7yXMo6nu_DYcrXOW0JnARKk"; //Environment.GetEnvironmentVariable("BOT_TOKEN");
+var botToken = builder.Configuration["Telegram:BotToken"]; //Environment.GetEnvironmentVariable("BOT_TOKEN");
 if (string.IsNullOrWhiteSpace(botToken))
     throw new Exception("Токен не отриманий");
 builder.Services.AddSingleton(new TelegramBotClient(botToken));
 #endregion
 
 #region MongoDB
-var connectionString = "mongodb+srv://bashuk0325oleksij_db_user:lZHXFstos2k8lAMX@data.t7bzerb.mongodb.net/?retryWrites=true&w=majority&appName=Data";
+var connectionString = builder.Configuration["MongoDB:ConnectionString"];
                   
 builder.Services.AddSingleton(new MongoClient(connectionString));
 builder.Services.AddSingleton<IMongoDatabase>(sp =>
@@ -28,6 +32,8 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
 });
 builder.Services.AddSingleton<ISettingRepository, SettingRepository>();
 builder.Services.AddSingleton<ISettingService, SettingService>();
+builder.Services.AddSingleton<IStateRepository, StateRepository>();
+builder.Services.AddSingleton<IStateService, StateService>();
 #endregion
 
 #region UpdateHandler

@@ -25,7 +25,7 @@ namespace TelegramBot_MinimalAPI.MongoDB.State.Repository.Realization
             await _collection.Find(s => s.UserId == userId).FirstOrDefaultAsync();
         
 
-        public async Task UpdateAsyn(CacheUserState cacheUserState) =>
+        public async Task UpdateAsync(CacheUserState cacheUserState) =>
             await _collection.ReplaceOneAsync(s => s.UserId == cacheUserState.UserId,cacheUserState);
         
     }

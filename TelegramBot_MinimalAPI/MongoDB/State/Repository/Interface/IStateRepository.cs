@@ -5,6 +5,6 @@
         Task CreateAsync(CacheUserState cacheUserState);
         Task<CacheUserState?> GetByUserIdAsync(long userId);
         Task DeleteAsync(long userId);
-        Task UpdateAsyn(CacheUserState cacheUserState);
+        Task UpdateAsync(CacheUserState cacheUserState);
     }
 }
