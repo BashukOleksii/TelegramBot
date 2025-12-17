@@ -1,8 +1,8 @@
-﻿using TelegramBot_MinimalAPI.MongoDB.Repository.Interfaces;
-using TelegramBot_MinimalAPI.MongoDB.Service.Interfaces;
+﻿using TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Interfaces;
+using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Interfaces;
 using TelegramBot_MinimalAPI.Setting;
 
-namespace TelegramBot_MinimalAPI.MongoDB.Service.Realizations
+namespace TelegramBot_MinimalAPI.MongoDB.Setting.Service.Realizations
 {
     public class SettingService: ISettingService
     {

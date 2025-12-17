@@ -13,16 +13,14 @@ namespace TelegramBot_MinimalAPI
     {
         private readonly TelegramBotClient _client;
         private readonly ISettingService _settingService;
-        private readonly HttpClient _httpClient;
         private readonly GeocodingServise _geocodingService;
 
 
-        public UpdateHandler(TelegramBotClient client, ISettingService settingService)
+        public UpdateHandler(TelegramBotClient client, ISettingService settingService, GeocodingServise geocodingServise)
         {
             _client = client;
             _settingService = settingService;
-            _httpClient = new HttpClient();
-            _geocodingService = new GeocodingServise(_httpClient);
+            _geocodingService = geocodingServise;
 
         }
 
@@ -136,14 +134,15 @@ namespace TelegramBot_MinimalAPI
                 return;
             }
 
-            var city = await _geocodingService.GetNameAsync(setting.Latitude, setting.Longtitude);
+            var city = await _geocodingService.GetNameAsync(setting.Latitude, setting.Longtitude) ?? "Не отриано";
 
+           
             var stringAnswer = "Користовацькі налаштування:" +
                 "\nМісце відстеження: " + city +
-                "\nКількість відстеження майбутніх днів: " + setting.ForecastDays ?? "7" +
-                "\nКалькість відстеження минулих днів" + setting.PastDays ?? "0" +
-                "\nОдиниця вимірювання температури: " + setting.TempUnit ?? "°C" +
-                "\nОдиниця вимірювання швидкості: " + setting.WindSpeed ?? "kh/s" +
+                "\nКількість відстеження майбутніх днів: " + (setting.ForecastDays ?? 7) +
+                "\nКалькість відстеження минулих днів" + (setting.PastDays ?? 0) +
+                "\nОдиниця вимірювання температури: " + (setting.TempUnit ?? "°C") +
+                "\nОдиниця вимірювання швидкості: " + (setting.WindSpeed ?? "kh/s") +
                 "\nБажаєте щось змінити?";
 
             var buttons = new InlineKeyboardMarkup(new List<InlineKeyboardButton[]>

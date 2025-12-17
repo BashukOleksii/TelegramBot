@@ -1,6 +1,6 @@
 ﻿using TelegramBot_MinimalAPI.Setting;
 
-namespace TelegramBot_MinimalAPI.MongoDB.Repository.Interfaces
+namespace TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Interfaces
 {
     public interface ISettingRepository
     {

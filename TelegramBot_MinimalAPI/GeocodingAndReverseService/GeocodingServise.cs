@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Globalization;
+using System.Text.Json;
+using TelegramBot_MinimalAPI.GeocodingAndReverseService.GetName;
 
 namespace TelegramBot_MinimalAPI.GeocodingAndReverseService
 {
@@ -20,37 +22,40 @@ namespace TelegramBot_MinimalAPI.GeocodingAndReverseService
                 var response = await _httpClient.GetAsync(url);
 
                 var result = await response.Content.ReadFromJsonAsync<Coordinate>();
-                
-                if(result.Latitude == null || result.Longitude == null)
+
+                if (result.Latitude == null || result.Longitude == null)
                     result = null;
 
                 return result;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 return null;
             }
-        } 
+        }
         public async Task<string> GetNameAsync(float lat, float lon)
         {
-            var url = $"https://geocoding-api.open-meteo.com/v1/reverse?latitude={lat}&longitude={lon}&language=uk";
+            var url = $"reverse?lat={lat.ToString(CultureInfo.InvariantCulture)}&lon={lon.ToString(CultureInfo.InvariantCulture)}&format=json&accept-language=uk";
 
-            var response = await _httpClient.GetStringAsync(url);
+            var response = await _httpClient.GetFromJsonAsync<NomanatimResponse>(url);
 
-            using var doc = JsonDocument.Parse(response);
+            if (response.Adress is null)
+                return "Не знайдено";
 
-            var results = doc.RootElement.GetProperty("result");
+            string location = "";
 
-            if(results.GetArrayLength() > 0)
-            {
-                var first = results[0];
+            if (response.Adress.State is not null)
+                location += response.Adress.State + " ";
+            if (response.Adress.District is not null)
+                location += response.Adress.District + " ";
+            if (response.Adress.City is not null)
+                location += response.Adress.City + " ";
+            if (response.Adress.Village is not null)
+                location += response.Adress.Village + " ";
 
-                return first.GetProperty("name").GetString() ?? "Не знайдено";
-            }
+            return location;
 
-            return "Не знайдено";
-
-                
-        } 
+        }
     }
 }

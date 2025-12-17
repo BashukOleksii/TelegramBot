@@ -1,8 +1,8 @@
 ﻿using MongoDB.Driver;
-using TelegramBot_MinimalAPI.MongoDB.Repository.Interfaces;
+using TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Interfaces;
 using TelegramBot_MinimalAPI.Setting;
 
-namespace TelegramBot_MinimalAPI.MongoDB.Repository.Realizations
+namespace TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Realizations
 {
     public class SettingRepository: ISettingRepository
     {

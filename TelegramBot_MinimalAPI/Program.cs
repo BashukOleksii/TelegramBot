@@ -2,10 +2,11 @@ using MongoDB.Driver;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using TelegramBot_MinimalAPI;
-using TelegramBot_MinimalAPI.MongoDB.Repository.Interfaces;
-using TelegramBot_MinimalAPI.MongoDB.Repository.Realizations;
-using TelegramBot_MinimalAPI.MongoDB.Service.Interfaces;
-using TelegramBot_MinimalAPI.MongoDB.Service.Realizations;
+using TelegramBot_MinimalAPI.GeocodingAndReverseService;
+using TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Interfaces;
+using TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Realizations;
+using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Interfaces;
+using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Realizations;
 var builder = WebApplication.CreateBuilder(args);
 
 #region DI
@@ -31,6 +32,13 @@ builder.Services.AddSingleton<ISettingService, SettingService>();
 
 #region UpdateHandler
 builder.Services.AddSingleton<UpdateHandler>();
+builder.Services.AddHttpClient<GeocodingServise>(client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("WeatherBot/1.0 (bashuk0325oleksij@gmail.com)");
+
+    client.BaseAddress = new Uri("https://nominatim.openstreetmap.org/");
+});
+
 #endregion
 
 #endregion
