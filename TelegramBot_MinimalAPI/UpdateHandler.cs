@@ -272,7 +272,7 @@ namespace TelegramBot_MinimalAPI
                 "\nКількість відстеження майбутніх днів: " + (setting.ForecastDays ?? 7) +
                 "\nКількість відстеження минулих днів: " + (setting.PastDays ?? 0) +
                 "\nОдиниця вимірювання температури: " + (setting.TempUnit ?? "°C") +
-                "\nОдиниця вимірювання швидкості: " + (setting.WindSpeed ?? "kh/s") +
+                "\nОдиниця вимірювання швидкості: " + (setting.WindSpeed ?? "kh/h") +
                 "\nБажаєте щось змінити?";
 
             var buttons = new InlineKeyboardMarkup(new List<InlineKeyboardButton[]>
@@ -310,6 +310,7 @@ namespace TelegramBot_MinimalAPI
 
             switch (data)
             {
+                #region UserSetting
                 case "place":
                     await HandleCommandStart(callbackQuery.Message!);
                     break;
@@ -352,6 +353,18 @@ namespace TelegramBot_MinimalAPI
                     await SetTempUnits(callbackQuery);
                 break;
 
+
+
+                case "speed":
+                    await HandleSpeedCallBack(callbackQuery.Message!.Chat.Id);
+                    break;
+
+                case "kh":
+                case "ms":
+                    await SetSpeedUnits(callbackQuery);
+                    break;
+
+                #endregion
 
             }
 
@@ -448,7 +461,7 @@ namespace TelegramBot_MinimalAPI
         #region Temp
         private async Task HandleTempCallBack(long chatID)
         {
-            // 0 1 2 3 5 7 14 31 61
+            // farenheit
             var keyBoard = new InlineKeyboardMarkup(new InlineKeyboardButton[]
             {
 
@@ -459,7 +472,7 @@ namespace TelegramBot_MinimalAPI
 
             await _client.SendMessage(
                 chatID,
-                "Виберіть в яких одиницяхвідо бражати",
+                "Виберіть в яких одиницях відображати",
                 replyMarkup: keyBoard
                 );
         }
@@ -475,7 +488,41 @@ namespace TelegramBot_MinimalAPI
 
             await _client.SendMessage(
                 callBackQuery.Message!.Chat.Id,
-                "Встановлено одиниці вимірювання: градуси" + (callBackQuery.Data == "celcium" ? "цельсія" : "фаренгейта")
+                "Встановлено одиниці вимірювання: градуси " + (callBackQuery.Data == "celcium" ? "цельсія" : "фаренгейта")
+                );
+
+        }
+        #endregion
+        #region Speed
+        private async Task HandleSpeedCallBack(long chatID)
+        {
+            // ms
+            var keyBoard = new InlineKeyboardMarkup(new InlineKeyboardButton[]
+            {
+
+                InlineKeyboardButton.WithCallbackData("гм/год", callbackData: "kh"),
+                InlineKeyboardButton.WithCallbackData("м/с", callbackData: "ms")
+
+            });
+
+            await _client.SendMessage(
+                chatID,
+                "Виберіть в яких одиницях відображати",
+                replyMarkup: keyBoard
+                );
+        }
+        private async Task SetSpeedUnits(CallbackQuery callBackQuery)
+        {
+
+            var setting = await _settingService.GetSettingAsync(callBackQuery.From!.Id);
+
+            setting!.TempUnit = callBackQuery.Data == "kh" ? null : callBackQuery.Data!;
+
+            await _settingService.Update(setting);
+
+            await _client.SendMessage(
+                callBackQuery.Message!.Chat.Id,
+                "Встановлено одиниці вимірювання: " + (callBackQuery.Data == "kh" ? "км/год" : "м/c")
                 );
 
         }
