@@ -5,6 +5,8 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramBot_MinimalAPI.GeocodingAndReverseService;
 using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Interfaces;
+using TelegramBot_MinimalAPI.MongoDB.State;
+using TelegramBot_MinimalAPI.MongoDB.State.Service.Interface;
 
 namespace TelegramBot_MinimalAPI
 {
@@ -13,16 +15,21 @@ namespace TelegramBot_MinimalAPI
     {
         private readonly TelegramBotClient _client;
         private readonly ISettingService _settingService;
+        private readonly IStateService _stateService;
         private readonly GeocodingServise _geocodingService;
         private float lat = (float)50.45466, lon = (float)30.5238;
 
 
-        public UpdateHandler(TelegramBotClient client, ISettingService settingService, GeocodingServise geocodingServise)
+        public UpdateHandler
+            (TelegramBotClient client,
+            ISettingService settingService,
+            IStateService stateService,
+            GeocodingServise geocodingServise)
         {
             _client = client;
             _settingService = settingService;
             _geocodingService = geocodingServise;
-
+            _stateService = stateService;
         }
 
         public async Task HandleUpdate(Update update)
@@ -33,44 +40,62 @@ namespace TelegramBot_MinimalAPI
                     if (update.Message is not null)
                         await HandleMessageUpdate(update.Message);
                     break;
+
             }
         }
 
         #region Message
         public async Task HandleMessageUpdate(Message message)
         {
-            var text = message.Text;
 
-            if (text is null)
-                return;
-            switch (text.ToLower())
+            if (message.Type == MessageType.Location)
             {
-                case "/start":
-                    await HandleCommandStart(message);
-                    break;
-                case "використовувати за замовчуванням":
-                    await SetDefaultLocation(message.Chat.Id);
-                    break;
-                case "надіслати своє положення":
-                    await SetLocationFromMessage(message);
-                    break;
-
-
-                case "налаштування":
-                    await HandleSettingButton(message.Chat.Id);
-                    break;
-                case "<-- назад":
-                    await SetMainButtons(message.Chat.Id);
-                    break;
-                case "користувацькі налаштування":
-                    await HandleUserSettingButton(message);
-                    break;
-                default:
+                await SetLocationFromMessage(message);
+                return;
             }
 
+            if (message.Text is not null)
+            {
 
+
+                switch (message.Text!.ToLower())
+                {
+                    case "/start":
+                        await HandleCommandStart(message);
+                        break;
+
+                    case "використовувати за замовчуванням":
+                        await SetDefaultLocation(message);
+                        break;
+                    case "встановити вручну":
+                        {
+                            await _client.SendMessage(message.Chat.Id, "Введіть назву");
+                            await _stateService.SetState(message.From!.Id, UserStates.WrittingLocationName);
+                        }
+                        break;
+
+
+
+                    case "налаштування":
+                        await HandleSettingButton(message.Chat.Id);
+                        break;
+                    case "<-- назад":
+                        await SetMainButtons(message.Chat.Id);
+                        break;
+                    case "користувацькі налаштування":
+                        await HandleUserSettingButton(message);
+                        break;
+                    default:
+                        await SetLocationFromName(message);
+                        break;
+                }
+
+            }
 
         }
+
+
+
 
         #region Початкові дії
         private async Task HandleCommandStart(Message message)
@@ -96,6 +121,13 @@ namespace TelegramBot_MinimalAPI
 
 
                 await _client.SendMessage(message.Chat.Id, "Привіт, виберіть початкові налаштування", replyMarkup: keyBoard);
+                await _client.SendMessage(
+                        message.Chat.Id,
+                        "ПОПЕРЕДЖЕННЯ функція \"Надіслати своє положення\" потребує дозволу в налаштуваннях" +
+                        "\nЯкщо не прийшла зворотня відповідь спробуйте змінити дозволи в налаштуванні додатку " +
+                        "\nАбо встановіть за допомогою назви місця" +
+                        "\n/start - для того, щоб знову почати"
+                );
             }
             else
                 await SetMainButtons(message.Chat.Id);
@@ -125,18 +157,34 @@ namespace TelegramBot_MinimalAPI
 
             await _client.SendMessage(chatID, "Вибери дію", replyMarkup: keyBoard);
         }
-        private async Task SetDefaultLocation(long chatID)
+        #region SetLocation
+        private async Task SetDefaultLocation(Message message)
         {
-            await _settingService.GetSettingAsync(chatID, lat, lon);
-            await _client.SendMessage(chatID, "Встановлено відстеження погоди для міста Київ");
-            await SetMainButtons(chatID);
+            var first = !await _settingService.IsExist(message.From!.Id);
+            var setting = await _settingService.GetSettingAsync(message.From!.Id, lat, lon);
+            if (!first)
+            {
+                setting.Latitude = lat;
+                setting.Longtitude = lon;
+                await _settingService.Update(setting);
+            }
+            await _client.SendMessage(message.Chat.Id, "Встановлено відстеження погоди для міста Київ");
+            await SetMainButtons(message.Chat.Id);
         }
         private async Task SetLocationFromMessage(Message message)
         {
+
             float latitude = (float)message.Location.Latitude;
             float longtitude = (float)message.Location.Longitude;
 
-            var userSetting = await _settingService.GetSettingAsync(message.Id, latitude, longtitude);
+            bool first = !(await _settingService.IsExist(message.From!.Id));
+            var userSetting = await _settingService.GetSettingAsync(message.From.Id, latitude, longtitude);
+            if (!first)
+            {
+                userSetting.Latitude = latitude;
+                userSetting.Longtitude = longtitude;
+                await _settingService.Update(userSetting);
+            }
 
             var locationName = await _geocodingService.GetNameAsync(userSetting.Latitude, userSetting.Longtitude);
 
@@ -146,24 +194,35 @@ namespace TelegramBot_MinimalAPI
         }
         private async Task SetLocationFromName(Message message)
         {
-            
-            if (message.Text is null)
+            var userState = await _stateService.GetStateAsync(message.From.Id);
+
+            if (userState != UserStates.WrittingLocationName || message.Text is null)
                 return;
 
             var location = await _geocodingService.GetPointAsync(message.Text);
-
             if (location is null)
             {
-                await _client.SendMessage(message.Chat.Id, "Проблема із назвою, не вийшло знайти");
+                await _client.SendMessage(message.Chat.Id, "Проблема із назвою, не вийшло знайти, введіть ще раз");
                 return;
             }
 
+            bool firstSetting = !(await _settingService.IsExist(message.From.Id));
             var userSetting = await _settingService.GetSettingAsync(message.Chat.Id, location.Latitude, location.Longitude);
+            if (!firstSetting)
+            {
+                userSetting.Latitude = location.Latitude;
+                userSetting.Longtitude = location.Longitude;
+                await _settingService.Update(userSetting);
+            }
+
 
             var locationName = await _geocodingService.GetNameAsync(userSetting.Latitude, userSetting.Longtitude);
 
             await _client.SendMessage(message.Chat.Id, $"Встановлено місце відстеження {locationName}");
+            await SetMainButtons(message.Chat.Id);
+            await _stateService.SetState(message.From.Id, UserStates.None);
         }
+        #endregion
 
         #endregion
 
@@ -208,7 +267,7 @@ namespace TelegramBot_MinimalAPI
                 return;
             }
 
-            var city = await _geocodingService.GetNameAsync(setting.Latitude, setting.Longtitude) ?? "Не отриано";
+            var city = await _geocodingService.GetNameAsync(setting.Latitude, setting.Longtitude);
 
 
             var stringAnswer = "Користовацькі налаштування:" +

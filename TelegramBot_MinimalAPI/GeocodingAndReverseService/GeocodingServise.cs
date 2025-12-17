@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using MongoDB.Driver.Core.Misc;
+using System.Globalization;
 using System.Text.Json;
 using TelegramBot_MinimalAPI.GeocodingAndReverseService.GetName;
 
@@ -17,16 +18,19 @@ namespace TelegramBot_MinimalAPI.GeocodingAndReverseService
         {
             try
             {
-                var url = $"https://geocoding-api.open-meteo.com/v1/search?name={name}&count=1&language=uk";
+                var url = $"https://geocoding-api.open-meteo.com/v1/search?name={Uri.EscapeDataString(name)}&count=1&language=uk";
 
                 var response = await _httpClient.GetAsync(url);
 
-                var result = await response.Content.ReadFromJsonAsync<Coordinate>();
+                if (!response.IsSuccessStatusCode)
+                    return null;
 
-                if (result.Latitude == null || result.Longitude == null)
-                    result = null;
+                var result = await response.Content.ReadFromJsonAsync<GeocodingResult>();
 
-                return result;
+                if (result?.results is null || result.results.Count == 0)
+                    return null;
+
+                return result.results[0];
             }
             catch (Exception ex)
             {
@@ -34,14 +38,14 @@ namespace TelegramBot_MinimalAPI.GeocodingAndReverseService
                 return null;
             }
         }
-        public async Task<string> GetNameAsync(float lat, float lon)
+        public async Task<string?> GetNameAsync(float lat, float lon)
         {
             var url = $"reverse?lat={lat.ToString(CultureInfo.InvariantCulture)}&lon={lon.ToString(CultureInfo.InvariantCulture)}&format=json&accept-language=uk";
 
             var response = await _httpClient.GetFromJsonAsync<NomanatimResponse>(url);
 
             if (response.Adress is null)
-                return "Не знайдено";
+                return null;
 
             string location = "";
 

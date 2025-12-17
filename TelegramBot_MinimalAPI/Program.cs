@@ -13,6 +13,13 @@ using TelegramBot_MinimalAPI.MongoDB.State.Service.Interface;
 using TelegramBot_MinimalAPI.MongoDB.State.Service.Realization;
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("appsetings.Development.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables();
+
+Console.WriteLine(builder.Environment.EnvironmentName);
+
 #region DI
 #region BotToken
 var botToken = builder.Configuration["Telegram:BotToken"]; //Environment.GetEnvironmentVariable("BOT_TOKEN");
