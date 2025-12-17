@@ -41,7 +41,7 @@ namespace TelegramBot_MinimalAPI
                         await HandleMessageUpdate(update.Message);
                     break;
                 case UpdateType.CallbackQuery:
-                    if(update.CallbackQuery is not null)
+                    if (update.CallbackQuery is not null)
                         await HandleCallBackQueryUpdate(update.CallbackQuery);
                     break;
 
@@ -270,7 +270,7 @@ namespace TelegramBot_MinimalAPI
             var stringAnswer = "Користовацькі налаштування:" +
                 "\nМісце відстеження: " + city +
                 "\nКількість відстеження майбутніх днів: " + (setting.ForecastDays ?? 7) +
-                "\nКалькість відстеження минулих днів: " + (setting.PastDays ?? 0) +
+                "\nКількість відстеження минулих днів: " + (setting.PastDays ?? 0) +
                 "\nОдиниця вимірювання температури: " + (setting.TempUnit ?? "°C") +
                 "\nОдиниця вимірювання швидкості: " + (setting.WindSpeed ?? "kh/s") +
                 "\nБажаєте щось змінити?";
@@ -313,34 +313,62 @@ namespace TelegramBot_MinimalAPI
                 case "place":
                     await HandleCommandStart(callbackQuery.Message!);
                     break;
+
                 case "days":
                     await HandleDaysCallBack(callbackQuery.Message!.Chat.Id);
                     break;
-                
+
                 case "1_days":
                 case "3_days":
+                case "7_days":
                 case "9_days":
                 case "14_days":
                 case "16_days":
                     await SetForecastDays(callbackQuery);
                     break;
 
+                case "pastDays":
+                    await HandlePastDaysCallBack(callbackQuery.Message!.Chat.Id);
+                    break;
+
+                case "0_days_past":
+                case "2_days_past":
+                case "3_days_past":
+                case "5_days_past":
+                case "7_days_past":
+                case "14_days_past":
+                case "31_days_past":
+                case "61_days_past":
+                    await SetPastDays(callbackQuery);
+                    break;
+
+
+                case "temp":
+                    await HandleTempCallBack(callbackQuery.Message!.Chat.Id);
+                    break;
+
+                case "celcium":
+                case "fahrenheit":
+                    await SetTempUnits(callbackQuery);
+                break;
 
 
             }
 
             await _client.AnswerCallbackQuery(callbackQuery.Id);
 
-            
+
         }
 
+        #region Days
         private async Task HandleDaysCallBack(long chatID)
         {
-            //1 3 9 14 16
+            //1 3 7 9 14 16
             var keyBoard = new InlineKeyboardMarkup(new InlineKeyboardButton[]
             {
                 InlineKeyboardButton.WithCallbackData("1 день", callbackData: "1_days"),
                 InlineKeyboardButton.WithCallbackData("3 дні", callbackData: "3_days"),
+                InlineKeyboardButton.WithCallbackData("7 днів", callbackData: "7_days"),
                 InlineKeyboardButton.WithCallbackData("9 днів", callbackData: "9_days"),
                 InlineKeyboardButton.WithCallbackData("14 днів", callbackData: "14_days"),
                 InlineKeyboardButton.WithCallbackData("16 днів", callbackData: "16_days"),
@@ -361,7 +389,7 @@ namespace TelegramBot_MinimalAPI
 
             var setting = await _settingService.GetSettingAsync(callbackQuery!.From.Id, lat, lon);
 
-            setting!.ForecastDays = days;
+            setting!.ForecastDays = days == 7 ? null : days;
 
             await _settingService.Update(setting);
 
@@ -369,6 +397,90 @@ namespace TelegramBot_MinimalAPI
                 callbackQuery.Message!.Chat.Id,
                 "Встановлено значення для кількості днів показу: " + days); ;
         }
+        #endregion
+        #region PastDays
+        private async Task HandlePastDaysCallBack(long chatID)
+        {
+            // 0 1 2 3 5 7 14 31 61
+            var keyBoard = new InlineKeyboardMarkup(new List<InlineKeyboardButton[]>
+            {
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Не потрібно", callbackData: "0_days_past"),
+                    InlineKeyboardButton.WithCallbackData("2 дні", callbackData: "2_days_past"),
+                    InlineKeyboardButton.WithCallbackData("3 дні", callbackData: "3_days_past"),
+                    InlineKeyboardButton.WithCallbackData("5 днів", callbackData: "5_days_past")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("7 днів", callbackData: "7_days_past"),
+                    InlineKeyboardButton.WithCallbackData("14 днів", callbackData: "14_days_past"),
+                    InlineKeyboardButton.WithCallbackData("31 днів", callbackData: "31_days_past"),
+                    InlineKeyboardButton.WithCallbackData("61 днів", callbackData: "61_days_past")
+                }
+            });
+
+            await _client.SendMessage(
+                chatID,
+                "Виберіть період інформації про минулу погоду погоду",
+                replyMarkup: keyBoard
+                );
+        }
+
+        private async Task SetPastDays(CallbackQuery callBackQuery)
+        {
+            string countDays = callBackQuery.Data!;
+            int days = int.Parse(countDays.Split('_')[0]);
+
+            var setting = await _settingService.GetSettingAsync(callBackQuery.From!.Id);
+
+            setting!.PastDays = days == 0 ? null : days;
+
+            await _settingService.Update(setting);
+
+            await _client.SendMessage(
+                callBackQuery.Message!.Chat.Id,
+                "Встановлено кількість відстеження минулих днів: " + days
+                );
+
+        }
+        #endregion
+        #region Temp
+        private async Task HandleTempCallBack(long chatID)
+        {
+            // 0 1 2 3 5 7 14 31 61
+            var keyBoard = new InlineKeyboardMarkup(new InlineKeyboardButton[]
+            {
+
+                InlineKeyboardButton.WithCallbackData("Цельсії", callbackData: "celcium"),
+                InlineKeyboardButton.WithCallbackData("Фаренгейти", callbackData: "fahrenheit")
+
+            });
+
+            await _client.SendMessage(
+                chatID,
+                "Виберіть в яких одиницяхвідо бражати",
+                replyMarkup: keyBoard
+                );
+        }
+
+        private async Task SetTempUnits(CallbackQuery callBackQuery)
+        {
+         
+            var setting = await _settingService.GetSettingAsync(callBackQuery.From!.Id);
+
+            setting!.TempUnit = callBackQuery.Data == "celcium"? null: callBackQuery.Data!;
+
+            await _settingService.Update(setting);
+
+            await _client.SendMessage(
+                callBackQuery.Message!.Chat.Id,
+                "Встановлено одиниці вимірювання: градуси" + (callBackQuery.Data == "celcium" ? "цельсія" : "фаренгейта")
+                );
+
+        }
+        #endregion
+
 
         #endregion
 
