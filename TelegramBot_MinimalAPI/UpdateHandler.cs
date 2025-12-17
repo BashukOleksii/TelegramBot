@@ -40,6 +40,11 @@ namespace TelegramBot_MinimalAPI
                     if (update.Message is not null)
                         await HandleMessageUpdate(update.Message);
                     break;
+                case UpdateType.CallbackQuery:
+                    if(update.CallbackQuery is not null)
+                        await HandleCallBackQueryUpdate(update.CallbackQuery);
+                    break;
+
 
             }
         }
@@ -93,10 +98,6 @@ namespace TelegramBot_MinimalAPI
             }
 
         }
-
-
-
-
         #region Початкові дії
         private async Task HandleCommandStart(Message message)
         {
@@ -120,7 +121,7 @@ namespace TelegramBot_MinimalAPI
                 };
 
 
-                await _client.SendMessage(message.Chat.Id, "Привіт, виберіть початкові налаштування", replyMarkup: keyBoard);
+                await _client.SendMessage(message.Chat.Id, "Привіт, виберіть налаштування", replyMarkup: keyBoard);
                 await _client.SendMessage(
                         message.Chat.Id,
                         "ПОПЕРЕДЖЕННЯ функція \"Надіслати своє положення\" потребує дозволу в налаштуваннях" +
@@ -225,9 +226,6 @@ namespace TelegramBot_MinimalAPI
         #endregion
 
         #endregion
-
-
-
         #region Налаштування
         private async Task HandleSettingButton(long chatID)
         {
@@ -256,7 +254,6 @@ namespace TelegramBot_MinimalAPI
 
             await _client.SendMessage(chatID, "Виберіть, що саме налаштувати", replyMarkup: keyBoard);
         }
-
         private async Task HandleUserSettingButton(Message message)
         {
             var setting = await _settingService.GetSettingAsync(message.From.Id, lat, lon);
@@ -282,17 +279,17 @@ namespace TelegramBot_MinimalAPI
             {
                 new InlineKeyboardButton[]
                 {
-                    InlineKeyboardButton.WithCallbackData("UserSettingCity")
+                    InlineKeyboardButton.WithCallbackData(text: "Місце відстеження", callbackData: "place")
                 },
                 new InlineKeyboardButton[]
                 {
-                    InlineKeyboardButton.WithCallbackData("UserSettingForecat"),
-                    InlineKeyboardButton.WithCallbackData("UserSettingPast")
+                    InlineKeyboardButton.WithCallbackData(text: "Кількість майбутніх днів", callbackData : "days"),
+                    InlineKeyboardButton.WithCallbackData(text: "Кількість минулих днів", callbackData : "pastDays")
                 },
                 new InlineKeyboardButton[]
                 {
-                    InlineKeyboardButton.WithCallbackData("UserSettingTemperature"),
-                    InlineKeyboardButton.WithCallbackData("UserSettingWind")
+                    InlineKeyboardButton.WithCallbackData(text : "Одниці виміру температури", callbackData: "temp"),
+                    InlineKeyboardButton.WithCallbackData(text: "Одиниці виміру швидкості", callbackData : "speed")
                 }
             });
 
@@ -302,5 +299,79 @@ namespace TelegramBot_MinimalAPI
         #endregion
 
         #endregion
+
+        #region CallBackQuery
+        private async Task HandleCallBackQueryUpdate(CallbackQuery callbackQuery)
+        {
+            var data = callbackQuery.Data;
+
+            if (string.IsNullOrEmpty(data))
+                return;
+
+            switch (data)
+            {
+                case "place":
+                    await HandleCommandStart(callbackQuery.Message!);
+                    break;
+                case "days":
+                    await HandleDaysCallBack(callbackQuery.Message!.Chat.Id);
+                    break;
+                
+                case "1_days":
+                case "3_days":
+                case "9_days":
+                case "14_days":
+                case "16_days":
+                    await SetForecastDays(callbackQuery);
+                    break;
+
+
+
+            }
+
+            await _client.AnswerCallbackQuery(callbackQuery.Id);
+
+            
+        }
+
+        private async Task HandleDaysCallBack(long chatID)
+        {
+            //1 3 9 14 16
+            var keyBoard = new InlineKeyboardMarkup(new InlineKeyboardButton[]
+            {
+                InlineKeyboardButton.WithCallbackData("1 день", callbackData: "1_days"),
+                InlineKeyboardButton.WithCallbackData("3 дні", callbackData: "3_days"),
+                InlineKeyboardButton.WithCallbackData("9 днів", callbackData: "9_days"),
+                InlineKeyboardButton.WithCallbackData("14 днів", callbackData: "14_days"),
+                InlineKeyboardButton.WithCallbackData("16 днів", callbackData: "16_days"),
+            });
+
+            await _client.SendMessage(
+                chatID,
+                "Виберіть період інформації про майбутню погоду",
+                replyMarkup: keyBoard
+                );
+
+        }
+
+        private async Task SetForecastDays(CallbackQuery callbackQuery)
+        {
+            string countDays = callbackQuery.Data!;
+            int days = int.Parse(countDays.Split('_')[0]);
+
+            var setting = await _settingService.GetSettingAsync(callbackQuery!.From.Id, lat, lon);
+
+            setting!.ForecastDays = days;
+
+            await _settingService.Update(setting);
+
+            await _client.SendMessage(
+                callbackQuery.Message!.Chat.Id,
+                "Встановлено значення для кількості днів показу: " + days); ;
+        }
+
+        #endregion
+
+
     }
 }
