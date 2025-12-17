@@ -27,7 +27,7 @@ namespace TelegramBot_MinimalAPI.MongoDB.Setting.Service.Realizations
             }
         }
 
-        public async Task<BaseSetting?> GetSettingAsync(long userId,float lat, float lon)
+        public async Task<BaseSetting?> GetSettingAsync(long userId,float lat = (float)50.45466, float lon = (float)30.5238)
         {
             try
             {
