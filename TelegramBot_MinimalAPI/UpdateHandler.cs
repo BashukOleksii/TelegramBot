@@ -1,4 +1,6 @@
-﻿using System.Reflection.Metadata;
+﻿using System.Reflection;
+using System.Reflection.Metadata;
+using System.Runtime.CompilerServices;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -7,6 +9,7 @@ using TelegramBot_MinimalAPI.GeocodingAndReverseService;
 using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Interfaces;
 using TelegramBot_MinimalAPI.MongoDB.State;
 using TelegramBot_MinimalAPI.MongoDB.State.Service.Interface;
+using TelegramBot_MinimalAPI.Setting;
 
 namespace TelegramBot_MinimalAPI
 {
@@ -90,6 +93,10 @@ namespace TelegramBot_MinimalAPI
                     case "користувацькі налаштування":
                         await HandleUserSettingButton(message);
                         break;
+                    case "поточна погода":
+                        await HandleCurentSettingButton(message);
+                        break;
+
                     default:
                         await SetLocationFromName(message);
                         break;
@@ -295,7 +302,68 @@ namespace TelegramBot_MinimalAPI
 
             await _client.SendMessage(message.Chat.Id, stringAnswer, replyMarkup: buttons);
         }
+        private async Task HandleCurentSettingButton(Message message)
+        {
+            var setting = await _settingService.GetSettingAsync(message.From!.Id);
 
+            var curentSetting = setting!.CurentSetting;
+
+            await _client.SendMessage(
+                message.Chat.Id,
+                "Налаштування відображення поточної погоди:",
+                replyMarkup: GetCurentSettingKeyBoad(curentSetting)
+                );
+        }
+
+        private string GetSymb(bool enable) => enable ? "✔️" : "❌";
+
+        private InlineKeyboardMarkup GetCurentSettingKeyBoad(CurentWeatherSetting curentSetting)
+        {
+            return new InlineKeyboardMarkup(new List<InlineKeyboardButton[]>
+            {
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Поточна температура " + GetSymb(curentSetting.Temperature),callbackData:"c:Temperature")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Відносна вологість " + GetSymb(curentSetting.RelativeHumidity),callbackData:"c:RelativeHumidity")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Поточна температура (відчувається як) " + GetSymb(curentSetting.ApperentTemperature),callbackData:"c:ApperentTemperature")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Швидксть вітру" + GetSymb(curentSetting.WindSpeed),callbackData:"c:WindSpeed")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Напрмок вітру " + GetSymb(curentSetting.WindDirection),callbackData:"c:WindDirection")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Загальна кількість опадів " + GetSymb(curentSetting.Precipitation),callbackData:"c:Precipitation")
+                },
+                 new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Кількість дощу " + GetSymb(curentSetting.Rain),callbackData:"c:Rain")
+                },
+                 new InlineKeyboardButton[]
+                 {
+                     InlineKeyboardButton.WithCallbackData("Кількіть снігопаду " + GetSymb(curentSetting.SnowFall),callbackData:"c:SnowFall")
+                 },
+                 new InlineKeyboardButton[]
+                 {
+                     InlineKeyboardButton.WithCallbackData("Поверхневий тиск " + GetSymb(curentSetting.SurfacePressure),callbackData:"c:SurfacePressure")
+                 },
+                 new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Відсоток хмар на небі " + GetSymb(curentSetting.CloudCover),callbackData:"c:CloudCover")
+                }
+
+            });
+        }
         #endregion
 
         #endregion
@@ -351,7 +419,7 @@ namespace TelegramBot_MinimalAPI
                 case "celcium":
                 case "fahrenheit":
                     await SetTempUnits(callbackQuery);
-                break;
+                    break;
 
 
 
@@ -364,15 +432,18 @@ namespace TelegramBot_MinimalAPI
                     await SetSpeedUnits(callbackQuery);
                     break;
 
-                #endregion
-
+                    #endregion
             }
+
+            if (data.StartsWith("c:"))
+                await HandleCurerentSettingCallBackQuery(callbackQuery);
 
             await _client.AnswerCallbackQuery(callbackQuery.Id);
 
 
         }
 
+        #region Personal
         #region Days
         private async Task HandleDaysCallBack(long chatID)
         {
@@ -479,10 +550,10 @@ namespace TelegramBot_MinimalAPI
 
         private async Task SetTempUnits(CallbackQuery callBackQuery)
         {
-         
+
             var setting = await _settingService.GetSettingAsync(callBackQuery.From!.Id);
 
-            setting!.TempUnit = callBackQuery.Data == "celcium"? null: callBackQuery.Data!;
+            setting!.TempUnit = callBackQuery.Data == "celcium" ? null : callBackQuery.Data!;
 
             await _settingService.Update(setting);
 
@@ -527,6 +598,33 @@ namespace TelegramBot_MinimalAPI
 
         }
         #endregion
+        #endregion
+        #region
+        private async Task HandleCurerentSettingCallBackQuery(CallbackQuery callbackQuery)
+        {
+            var setting = await _settingService.GetSettingAsync(callbackQuery.From!.Id);
+
+            string propertyName = callbackQuery.Data!.Substring(2);
+            SetPropetyValue(setting.CurentSetting, propertyName);
+            await _settingService.Update(setting);
+
+            await _client.EditMessageReplyMarkup(
+                callbackQuery.Message.Chat.Id,
+                 callbackQuery.Message.Id,
+                 replyMarkup: GetCurentSettingKeyBoad(setting.CurentSetting)
+                );
+
+        }
+
+        private async Task SetPropetyValue(object setting, string propertyName)
+        {
+            PropertyInfo propertyInfo = setting.GetType().GetProperty(propertyName);
+            bool enable = !(bool)propertyInfo.GetValue(setting);
+            propertyInfo.SetValue(setting, enable);
+        }
+        #endregion
+
+
 
 
         #endregion
