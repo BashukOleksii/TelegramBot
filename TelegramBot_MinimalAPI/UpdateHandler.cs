@@ -64,7 +64,8 @@ namespace TelegramBot_MinimalAPI
 
             if (message.Text is not null)
             {
-
+                if(message.Text.EndsWith("погода"))
+                    await HandleWeatherEnableSettingButton(message);
 
                 switch (message.Text!.ToLower())
                 {
@@ -93,9 +94,7 @@ namespace TelegramBot_MinimalAPI
                     case "користувацькі налаштування":
                         await HandleUserSettingButton(message);
                         break;
-                    case "поточна погода":
-                        await HandleCurentSettingButton(message);
-                        break;
+                    
 
                     default:
                         await SetLocationFromName(message);
@@ -176,9 +175,14 @@ namespace TelegramBot_MinimalAPI
                 setting.Latitude = lat;
                 setting.Longtitude = lon;
                 await _settingService.Update(setting);
+                await HandleSettingButton(message.Chat.Id);
             }
+            else
+                await SetMainButtons(message.Chat.Id);
+
+
             await _client.SendMessage(message.Chat.Id, "Встановлено відстеження погоди для міста Київ");
-            await SetMainButtons(message.Chat.Id);
+            
         }
         private async Task SetLocationFromMessage(Message message)
         {
@@ -193,7 +197,10 @@ namespace TelegramBot_MinimalAPI
                 userSetting.Latitude = latitude;
                 userSetting.Longtitude = longtitude;
                 await _settingService.Update(userSetting);
+                await HandleSettingButton(message.Chat.Id);
             }
+            else
+                await SetMainButtons(message.Chat.Id);
 
             var locationName = await _geocodingService.GetNameAsync(userSetting.Latitude, userSetting.Longtitude);
 
@@ -222,7 +229,10 @@ namespace TelegramBot_MinimalAPI
                 userSetting.Latitude = location.Latitude;
                 userSetting.Longtitude = location.Longitude;
                 await _settingService.Update(userSetting);
+                await HandleSettingButton(message.Chat.Id);
             }
+            else
+                await SetMainButtons(message.Chat.Id);
 
 
             var locationName = await _geocodingService.GetNameAsync(userSetting.Latitude, userSetting.Longtitude);
@@ -262,8 +272,7 @@ namespace TelegramBot_MinimalAPI
 
             })
             {
-                ResizeKeyboard = true,
-                OneTimeKeyboard = true
+                ResizeKeyboard = true
             };
 
             await _client.SendMessage(chatID, "Виберіть, що саме налаштувати", replyMarkup: keyBoard);
@@ -309,22 +318,26 @@ namespace TelegramBot_MinimalAPI
 
             await _client.SendMessage(message.Chat.Id, stringAnswer, replyMarkup: buttons);
         }
-        private async Task HandleCurentSettingButton(Message message)
+        private async Task HandleWeatherEnableSettingButton(Message message)
         {
             var setting = await _settingService.GetSettingAsync(message.From!.Id);
 
-            var curentSetting = setting!.CurentSetting;
+            string type = message.Text.Split(' ')[0];
+
+            InlineKeyboardMarkup keyBoard = type switch
+            {
+                "Поточна" => GetCurentSettingKeyBoad(setting.CurentSetting),
+                "Погодинна" => GetHourlySettingKeyBoad(setting.HourlySetting),
+                "Поденна" => GetDailySettingKeyBoad(setting.DailySetting)
+            };
 
             await _client.SendMessage(
                 message.Chat.Id,
                 "Налаштування відображення поточної погоди:",
-                replyMarkup: GetCurentSettingKeyBoad(curentSetting)
+                replyMarkup: keyBoard
                 );
         }
-        private async Task HandleHourlySettingButton(Message message)
-        {
-            
-        }
+        
 
         #endregion
 
@@ -429,7 +442,64 @@ namespace TelegramBot_MinimalAPI
 
 
         }
-        private InlineKeyboardMarkup GetDailySettingKeyBoad(DailyWeatherSetting dailySetting) { return null; }
+        private InlineKeyboardMarkup GetDailySettingKeyBoad(DailyWeatherSetting dailySetting) 
+        {
+            return new InlineKeyboardMarkup(new List<InlineKeyboardButton[]>
+            {
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Максимальна температура " + GetSymb(dailySetting.MaxTemp),callbackData:"d:MaxTemp")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Мінімальна температура " + GetSymb(dailySetting.MinTemp),callbackData:"d:MinTemp")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Як відчувається максимальна температура" + GetSymb(dailySetting.ApperentMax),callbackData:"d:ApperentMax")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Як відчувається мінімальна температура" + GetSymb(dailySetting.ApperentMin),callbackData:"d:ApperentMin")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Максимальна швидкість вітру" + GetSymb(dailySetting.WindSpeedMax),callbackData:"d:WindSpeedMax")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Переважний напрямок вітру" + GetSymb(dailySetting.DominantWindDirection),callbackData:"d:DominantWindDirection")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Схід сонця" + GetSymb(dailySetting.SunRise),callbackData:"d:SunRise")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Захід сонця" + GetSymb(dailySetting.SunSet),callbackData:"d:SunSet")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Тривалість світловго дня" + GetSymb(dailySetting.DayLightDuration),callbackData:"d:DayLightDuration")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Загальна кількість опадів" + GetSymb(dailySetting.PrecipitationSum),callbackData:"d:PrecipitationSum")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Кількість опадів від дощу" + GetSymb(dailySetting.RainSum),callbackData:"d:RainSum")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Кількість опадів від зливи" + GetSymb(dailySetting.ShowersSum),callbackData:"d:ShowersSum")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Кількість опадів від снігу" + GetSymb(dailySetting.SnowdallSum),callbackData:"d:SnowdallSum")
+                },
+            });
+        }
         #endregion
 
 
@@ -660,6 +730,7 @@ namespace TelegramBot_MinimalAPI
             InlineKeyboardMarkup keyBoard = prefix switch {
                 "c:" => GetCurentSettingKeyBoad(setting.CurentSetting),
                 "h:" => GetHourlySettingKeyBoad(setting.HourlySetting),
+               
                 "d:" => GetDailySettingKeyBoad(setting.DailySetting)
             };
 

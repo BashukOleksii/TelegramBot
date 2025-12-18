@@ -32,19 +32,17 @@ namespace TelegramBot_MinimalAPI.Setting
         public bool DayLightDuration { get; set; } = true;
 
         [BsonElement("precipitation_sum")]
-        public bool PrecipitatiobSum { get; set; } = true;
+        public bool PrecipitationSum { get; set; } = true;
 
         [BsonElement("rain_sum")]
         public bool RainSum { get; set; } 
 
         [BsonElement("showers_sum")] // Зливи
-        public bool ShowersSun { get; set; } 
+        public bool ShowersSum { get; set; } 
 
         [BsonElement("snowfall_sum")] // Сніг
         public bool SnowdallSum { get; set; }
-        
-        [BsonElement("precipitation_hours")] 
-        public bool PrecipitationHours { get; set; } 
+
 
     }
 }
