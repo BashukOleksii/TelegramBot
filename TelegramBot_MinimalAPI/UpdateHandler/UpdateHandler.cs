@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using Microsoft.AspNetCore.Http.Extensions;
+using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using Telegram.Bot;
@@ -9,9 +10,10 @@ using TelegramBot_MinimalAPI.GeocodingAndReverseService;
 using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Interfaces;
 using TelegramBot_MinimalAPI.MongoDB.State;
 using TelegramBot_MinimalAPI.MongoDB.State.Service.Interface;
+using TelegramBot_MinimalAPI.Response;
 using TelegramBot_MinimalAPI.Setting;
 
-namespace TelegramBot_MinimalAPI
+namespace TelegramBot_MinimalAPI.UpdateHandler
 {
 
     public class UpdateHandler
@@ -21,6 +23,7 @@ namespace TelegramBot_MinimalAPI
         private readonly IStateService _stateService;
         private readonly GeocodingServise _geocodingService;
         private float lat = (float)50.45466, lon = (float)30.5238;
+
 
 
         public UpdateHandler
@@ -64,7 +67,7 @@ namespace TelegramBot_MinimalAPI
 
             if (message.Text is not null)
             {
-                if(message.Text.EndsWith("погода"))
+                if(message.Text.EndsWith("погода")&& !message.Text.StartsWith("Загальна"))
                     await HandleWeatherEnableSettingButton(message);
 
                 switch (message.Text!.ToLower())
@@ -93,6 +96,9 @@ namespace TelegramBot_MinimalAPI
                         break;
                     case "користувацькі налаштування":
                         await HandleUserSettingButton(message);
+                        break;
+                    case "загальна + поточна погода":
+                        await HandleCurrentDailyButton(message);
                         break;
                     
 
@@ -160,8 +166,7 @@ namespace TelegramBot_MinimalAPI
                 }
             })
             {
-                ResizeKeyboard = true,
-                OneTimeKeyboard = true
+                ResizeKeyboard = true
             };
 
             await _client.SendMessage(chatID, "Вибери дію", replyMarkup: keyBoard);
@@ -190,7 +195,7 @@ namespace TelegramBot_MinimalAPI
             float latitude = (float)message.Location.Latitude;
             float longtitude = (float)message.Location.Longitude;
 
-            bool first = !(await _settingService.IsExist(message.From!.Id));
+            bool first = !await _settingService.IsExist(message.From!.Id);
             var userSetting = await _settingService.GetSettingAsync(message.From.Id, latitude, longtitude);
             if (!first)
             {
@@ -206,7 +211,6 @@ namespace TelegramBot_MinimalAPI
 
             await _client.SendMessage(message.Chat.Id, $"Встановлено місце відстеження: {locationName}");
 
-            await SetMainButtons(message.Chat.Id);
         }
         private async Task SetLocationFromName(Message message)
         {
@@ -222,7 +226,7 @@ namespace TelegramBot_MinimalAPI
                 return;
             }
 
-            bool firstSetting = !(await _settingService.IsExist(message.From.Id));
+            bool firstSetting = !await _settingService.IsExist(message.From.Id);
             var userSetting = await _settingService.GetSettingAsync(message.Chat.Id, location.Latitude, location.Longitude);
             if (!firstSetting)
             {
@@ -238,7 +242,6 @@ namespace TelegramBot_MinimalAPI
             var locationName = await _geocodingService.GetNameAsync(userSetting.Latitude, userSetting.Longtitude);
 
             await _client.SendMessage(message.Chat.Id, $"Встановлено місце відстеження {locationName}");
-            await SetMainButtons(message.Chat.Id);
             await _stateService.SetState(message.From.Id, UserStates.None);
         }
 
@@ -505,6 +508,37 @@ namespace TelegramBot_MinimalAPI
 
 
 
+        #region Погода
+
+        private async Task HandleCurrentDailyButton(Message message)
+        {
+            await _client.SendChatAction(message.Chat.Id,ChatAction.FindLocation);
+            var userSetting = await _settingService.GetSettingAsync(message.From.Id);
+
+            var queryBuilder = new QueryBuilderTool.QueryBuilder();
+
+            queryBuilder
+                .SetSetting(userSetting)
+                .AddType<CurentWeatherSetting>()
+                .AddType<DailyWeatherSetting>();
+
+            using var _httpClient = new HttpClient();
+
+            Console.WriteLine($"URL: {queryBuilder.Build()}");
+
+            var response = await _httpClient.GetAsync(queryBuilder.Build());
+            var weather = await response.Content.ReadFromJsonAsync<BaseResponse>();
+            var info = weather.GetInfo(userSetting.TempUnit == null? "°C": "°F", userSetting.WindSpeed== null ? "км/год" : "м/с");
+
+            await _client.SendMessage(message.Chat.Id, info[0]);
+            await _client.SendMessage(message.Chat.Id, info[1], parseMode: ParseMode.Html);
+
+        }
+        #endregion
+
+
+
+
 
         #endregion
 
@@ -563,7 +597,7 @@ namespace TelegramBot_MinimalAPI
         #region Days
         private async Task HandleDaysCallBack(long chatID)
         {
-            //1 3 7 9 14 16
+            //1 3 7 9 14 15
             var keyBoard = new InlineKeyboardMarkup(new InlineKeyboardButton[]
             {
                 InlineKeyboardButton.WithCallbackData("1 день", callbackData: "1_days"),
@@ -571,7 +605,7 @@ namespace TelegramBot_MinimalAPI
                 InlineKeyboardButton.WithCallbackData("7 днів", callbackData: "7_days"),
                 InlineKeyboardButton.WithCallbackData("9 днів", callbackData: "9_days"),
                 InlineKeyboardButton.WithCallbackData("14 днів", callbackData: "14_days"),
-                InlineKeyboardButton.WithCallbackData("16 днів", callbackData: "16_days"),
+                InlineKeyboardButton.WithCallbackData("15 днів", callbackData: "15_days"),
             });
 
             await _client.SendMessage(

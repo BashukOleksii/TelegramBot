@@ -1,9 +1,10 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using System.Globalization;
 using System.Reflection;
 using TelegramBot_MinimalAPI.Setting;
 
-namespace TelegramBot_MinimalAPI.QueryBuilder
+namespace TelegramBot_MinimalAPI.QueryBuilderTool
 {
     public class QueryBuilder
     {
@@ -22,6 +23,9 @@ namespace TelegramBot_MinimalAPI.QueryBuilder
             {
                 if (IsClass(property.PropertyType))
                     continue;
+                
+                if (property.Name == "_id")
+                    continue;
 
                 var value = property.GetValue(_userSetting);
 
@@ -30,14 +34,14 @@ namespace TelegramBot_MinimalAPI.QueryBuilder
 
                 var key = property.GetCustomAttribute<BsonElementAttribute>()!.ElementName;
 
-                queries[key] = value.ToString();
+                queries[key] = Convert.ToString(value,CultureInfo.InvariantCulture);
             }
 
             url = baseUrl + string.Join('&', queries.Select(d => $"{d.Key}={d.Value}"));
 
             return this;
         }
-
+            
         public QueryBuilder AddType<T>()
         {
             if(string.IsNullOrEmpty(url))
