@@ -14,9 +14,6 @@ namespace TelegramBot_MinimalAPI.Setting
         [BsonElement("apparent_temperature")]
         public bool ApperentTemperature { get; set; } = true;
 
-        [BsonElement("is_day")]
-        public bool IsDay { get; set; } 
-
         [BsonElement("wind_speed_10m")]
         public bool WindSpeed { get; set; } = true;
 
