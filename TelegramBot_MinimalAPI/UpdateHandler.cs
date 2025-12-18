@@ -105,6 +105,7 @@ namespace TelegramBot_MinimalAPI
             }
 
         }
+
         #region Початкові дії
         private async Task HandleCommandStart(Message message)
         {
@@ -140,6 +141,7 @@ namespace TelegramBot_MinimalAPI
             else
                 await SetMainButtons(message.Chat.Id);
         }
+       
         private async Task SetMainButtons(long chatID)
         {
             var keyBoard = new ReplyKeyboardMarkup(new[]
@@ -165,7 +167,6 @@ namespace TelegramBot_MinimalAPI
 
             await _client.SendMessage(chatID, "Вибери дію", replyMarkup: keyBoard);
         }
-        #region SetLocation
         private async Task SetDefaultLocation(Message message)
         {
             var first = !await _settingService.IsExist(message.From!.Id);
@@ -230,9 +231,15 @@ namespace TelegramBot_MinimalAPI
             await SetMainButtons(message.Chat.Id);
             await _stateService.SetState(message.From.Id, UserStates.None);
         }
-        #endregion
 
         #endregion
+
+
+
+
+
+
+
         #region Налаштування
         private async Task HandleSettingButton(long chatID)
         {
@@ -314,9 +321,19 @@ namespace TelegramBot_MinimalAPI
                 replyMarkup: GetCurentSettingKeyBoad(curentSetting)
                 );
         }
+        private async Task HandleHourlySettingButton(Message message)
+        {
+            
+        }
 
+        #endregion
+
+
+
+
+
+        #region Допоміжні
         private string GetSymb(bool enable) => enable ? "✔️" : "❌";
-
         private InlineKeyboardMarkup GetCurentSettingKeyBoad(CurentWeatherSetting curentSetting)
         {
             return new InlineKeyboardMarkup(new List<InlineKeyboardButton[]>
@@ -364,7 +381,60 @@ namespace TelegramBot_MinimalAPI
 
             });
         }
+        private InlineKeyboardMarkup GetHourlySettingKeyBoad(HourlyWeatherSetting hourlySetting)
+        {
+            return new InlineKeyboardMarkup(new List<InlineKeyboardButton[]>
+            {
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Температура " + GetSymb(hourlySetting.Temperature),callbackData:"h:Temperature")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Відносна вологість " + GetSymb(hourlySetting.RelativeHumidity),callbackData:"h:RelativeHumidity")
+                },
+
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Ймовірність дощу " + GetSymb(hourlySetting.PrecipitationProbality),callbackData:"h:PrecipitationProbality")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Видимість " + GetSymb(hourlySetting.Visibility),callbackData:"h:Visibility")
+                },
+
+
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Точка роси " + GetSymb(hourlySetting.DewPoint),callbackData:"h:DewPoint")
+                },
+                new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Швидість вітру " + GetSymb(hourlySetting.WindSpeed),callbackData:"h:WindSpeed")
+                },
+                 new InlineKeyboardButton[]
+                {
+                    InlineKeyboardButton.WithCallbackData("Пориви вітру " + GetSymb(hourlySetting.WindGusts),callbackData:"h:WindGusts")
+                },
+                 new InlineKeyboardButton[]
+                 {
+                     InlineKeyboardButton.WithCallbackData("Напрямок вітру " + GetSymb(hourlySetting.WindDirection),callbackData:"h:WindDirection")
+                 },
+                 new InlineKeyboardButton[]
+                 {
+                     InlineKeyboardButton.WithCallbackData("Відсоток хмар на небі " + GetSymb(hourlySetting.CloudCover),callbackData:"h:CloudCover")
+                 }
+
+            });
+
+
+        }
+        private InlineKeyboardMarkup GetDailySettingKeyBoad(DailyWeatherSetting dailySetting) { return null; }
         #endregion
+
+
+
+
 
         #endregion
 
@@ -376,9 +446,21 @@ namespace TelegramBot_MinimalAPI
             if (string.IsNullOrEmpty(data))
                 return;
 
+            if (data.StartsWith("c:") || data.StartsWith("h:") || data.StartsWith("d:"))
+                await HandleEnableSettingCallBackQuery(callbackQuery);
+            
+            if (data.Contains("_days"))
+                await SetDaysUserSetting(callbackQuery);
+
+            if (data.StartsWith("temp_"))
+                await SetTempUnits(callbackQuery);
+
+            if (data.StartsWith("speed_"))
+                await SetSpeedUnits(callbackQuery);     
+            
             switch (data)
             {
-                #region UserSetting
+
                 case "place":
                     await HandleCommandStart(callbackQuery.Message!);
                     break;
@@ -387,56 +469,19 @@ namespace TelegramBot_MinimalAPI
                     await HandleDaysCallBack(callbackQuery.Message!.Chat.Id);
                     break;
 
-                case "1_days":
-                case "3_days":
-                case "7_days":
-                case "9_days":
-                case "14_days":
-                case "16_days":
-                    await SetForecastDays(callbackQuery);
-                    break;
-
                 case "pastDays":
                     await HandlePastDaysCallBack(callbackQuery.Message!.Chat.Id);
                     break;
-
-                case "0_days_past":
-                case "2_days_past":
-                case "3_days_past":
-                case "5_days_past":
-                case "7_days_past":
-                case "14_days_past":
-                case "31_days_past":
-                case "61_days_past":
-                    await SetPastDays(callbackQuery);
-                    break;
-
-
+              
                 case "temp":
                     await HandleTempCallBack(callbackQuery.Message!.Chat.Id);
                     break;
 
-                case "celcium":
-                case "fahrenheit":
-                    await SetTempUnits(callbackQuery);
-                    break;
-
-
-
                 case "speed":
                     await HandleSpeedCallBack(callbackQuery.Message!.Chat.Id);
                     break;
-
-                case "kh":
-                case "ms":
-                    await SetSpeedUnits(callbackQuery);
-                    break;
-
-                    #endregion
             }
 
-            if (data.StartsWith("c:"))
-                await HandleCurerentSettingCallBackQuery(callbackQuery);
 
             await _client.AnswerCallbackQuery(callbackQuery.Id);
 
@@ -444,6 +489,7 @@ namespace TelegramBot_MinimalAPI
         }
 
         #region Personal
+
         #region Days
         private async Task HandleDaysCallBack(long chatID)
         {
@@ -465,24 +511,6 @@ namespace TelegramBot_MinimalAPI
                 );
 
         }
-
-        private async Task SetForecastDays(CallbackQuery callbackQuery)
-        {
-            string countDays = callbackQuery.Data!;
-            int days = int.Parse(countDays.Split('_')[0]);
-
-            var setting = await _settingService.GetSettingAsync(callbackQuery!.From.Id, lat, lon);
-
-            setting!.ForecastDays = days == 7 ? null : days;
-
-            await _settingService.Update(setting);
-
-            await _client.SendMessage(
-                callbackQuery.Message!.Chat.Id,
-                "Встановлено значення для кількості днів показу: " + days); ;
-        }
-        #endregion
-        #region PastDays
         private async Task HandlePastDaysCallBack(long chatID)
         {
             // 0 1 2 3 5 7 14 31 61
@@ -510,25 +538,27 @@ namespace TelegramBot_MinimalAPI
                 replyMarkup: keyBoard
                 );
         }
-
-        private async Task SetPastDays(CallbackQuery callBackQuery)
+        private async Task SetDaysUserSetting(CallbackQuery callbackQuery)
         {
-            string countDays = callBackQuery.Data!;
-            int days = int.Parse(countDays.Split('_')[0]);
+            var parts = callbackQuery.Data!.Split('_');
+            int days = int.Parse(parts[0]);
+            var setting = await _settingService.GetSettingAsync(callbackQuery!.From.Id, lat, lon);
 
-            var setting = await _settingService.GetSettingAsync(callBackQuery.From!.Id);
-
-            setting!.PastDays = days == 0 ? null : days;
+            if (parts.Length == 2)
+                setting!.ForecastDays = days == 7 ? null : days;
+            else
+                setting!.PastDays = days == 0 ? null : days;
 
             await _settingService.Update(setting);
 
             await _client.SendMessage(
-                callBackQuery.Message!.Chat.Id,
-                "Встановлено кількість відстеження минулих днів: " + days
-                );
-
+                callbackQuery.Message!.Chat.Id,
+                "Встановлено значення для кількості днів: " + days); ;
         }
+
         #endregion
+
+
         #region Temp
         private async Task HandleTempCallBack(long chatID)
         {
@@ -536,8 +566,8 @@ namespace TelegramBot_MinimalAPI
             var keyBoard = new InlineKeyboardMarkup(new InlineKeyboardButton[]
             {
 
-                InlineKeyboardButton.WithCallbackData("Цельсії", callbackData: "celcium"),
-                InlineKeyboardButton.WithCallbackData("Фаренгейти", callbackData: "fahrenheit")
+                InlineKeyboardButton.WithCallbackData("Цельсії", callbackData: "temp_celcium"),
+                InlineKeyboardButton.WithCallbackData("Фаренгейти", callbackData: "temp_fahrenheit")
 
             });
 
@@ -550,20 +580,24 @@ namespace TelegramBot_MinimalAPI
 
         private async Task SetTempUnits(CallbackQuery callBackQuery)
         {
+            var units = callBackQuery.Data.Substring(5);
 
             var setting = await _settingService.GetSettingAsync(callBackQuery.From!.Id);
 
-            setting!.TempUnit = callBackQuery.Data == "celcium" ? null : callBackQuery.Data!;
+            setting!.TempUnit = units == "celcium" ? null : units;
 
             await _settingService.Update(setting);
 
             await _client.SendMessage(
                 callBackQuery.Message!.Chat.Id,
-                "Встановлено одиниці вимірювання: градуси " + (callBackQuery.Data == "celcium" ? "цельсія" : "фаренгейта")
+                "Встановлено одиниці вимірювання: градуси " + (units == "celcium" ? "цельсія" : "фаренгейта")
                 );
 
         }
+
         #endregion
+
+
         #region Speed
         private async Task HandleSpeedCallBack(long chatID)
         {
@@ -571,8 +605,8 @@ namespace TelegramBot_MinimalAPI
             var keyBoard = new InlineKeyboardMarkup(new InlineKeyboardButton[]
             {
 
-                InlineKeyboardButton.WithCallbackData("гм/год", callbackData: "kh"),
-                InlineKeyboardButton.WithCallbackData("м/с", callbackData: "ms")
+                InlineKeyboardButton.WithCallbackData("гм/год", callbackData: "speed_kh"),
+                InlineKeyboardButton.WithCallbackData("м/с", callbackData: "speed_ms")
 
             });
 
@@ -584,45 +618,59 @@ namespace TelegramBot_MinimalAPI
         }
         private async Task SetSpeedUnits(CallbackQuery callBackQuery)
         {
+            var units = callBackQuery.Data!.Substring(6);
 
             var setting = await _settingService.GetSettingAsync(callBackQuery.From!.Id);
 
-            setting!.TempUnit = callBackQuery.Data == "kh" ? null : callBackQuery.Data!;
+            setting!.WindSpeed = units == "kh" ? null : units;
 
             await _settingService.Update(setting);
 
             await _client.SendMessage(
                 callBackQuery.Message!.Chat.Id,
-                "Встановлено одиниці вимірювання: " + (callBackQuery.Data == "kh" ? "км/год" : "м/c")
+                "Встановлено одиниці вимірювання: " + (units == "kh" ? "км/год" : "м/c")
                 );
 
         }
         #endregion
-        #endregion
-        #region
-        private async Task HandleCurerentSettingCallBackQuery(CallbackQuery callbackQuery)
+
+        #endregion 
+
+        private async Task HandleEnableSettingCallBackQuery(CallbackQuery callbackQuery)
         {
+            string prefix = callbackQuery.Data.Substring(0,2);
+            string propertyName = callbackQuery.Data.Substring(2);
+
             var setting = await _settingService.GetSettingAsync(callbackQuery.From!.Id);
 
-            string propertyName = callbackQuery.Data!.Substring(2);
-            SetPropetyValue(setting.CurentSetting, propertyName);
+            object settingObject = prefix switch
+            {
+                "c:" => setting.CurentSetting,
+                "h:" => setting.HourlySetting,
+                "d:" => setting.DailySetting
+            };
+
+            
+            PropertyInfo propertyInfo = settingObject.GetType().GetProperty(propertyName);
+            bool enable = !(bool)propertyInfo.GetValue(settingObject);
+            propertyInfo.SetValue(settingObject, enable);
+
             await _settingService.Update(setting);
+
+            InlineKeyboardMarkup keyBoard = prefix switch {
+                "c:" => GetCurentSettingKeyBoad(setting.CurentSetting),
+                "h:" => GetHourlySettingKeyBoad(setting.HourlySetting),
+                "d:" => GetDailySettingKeyBoad(setting.DailySetting)
+            };
 
             await _client.EditMessageReplyMarkup(
                 callbackQuery.Message.Chat.Id,
                  callbackQuery.Message.Id,
-                 replyMarkup: GetCurentSettingKeyBoad(setting.CurentSetting)
+                 replyMarkup: keyBoard
                 );
 
         }
 
-        private async Task SetPropetyValue(object setting, string propertyName)
-        {
-            PropertyInfo propertyInfo = setting.GetType().GetProperty(propertyName);
-            bool enable = !(bool)propertyInfo.GetValue(setting);
-            propertyInfo.SetValue(setting, enable);
-        }
-        #endregion
 
 
 

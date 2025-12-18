@@ -11,9 +11,6 @@ namespace TelegramBot_MinimalAPI.Setting
         [BsonElement("relative_humidity_2m")]
         public bool RelativeHumidity { get; set; }
 
-        [BsonElement("apparent_temperature")]
-        public bool ApperentTemperature { get; set; } 
-
         [BsonElement("precipitation_probability")]
         public bool PrecipitationProbality { get; set; } = true;
 
