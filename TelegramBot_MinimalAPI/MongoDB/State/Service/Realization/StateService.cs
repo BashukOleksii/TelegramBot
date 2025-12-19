@@ -5,9 +5,9 @@ namespace TelegramBot_MinimalAPI.MongoDB.State.Service.Realization
 {
     public class StateService : IStateService
     {
-        private readonly IWeatherDataRepository _stateService;
+        private readonly IStateRepository _stateService;
 
-        public StateService(IWeatherDataRepository stateService) 
+        public StateService(IStateRepository stateService) 
         {
             _stateService = stateService; 
         }

@@ -17,23 +17,41 @@ namespace TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Realization
             
         
 
-        public async Task<string?> GetDate(int userIndex, int rowIndex, string propName)
+        public async Task<string?> GetPage(long userId,string propertyName, int index)
         {
-            var data = await _weatherDataRepository.GetAsync(userIndex);
-            if (data is null)
+            var weatherData = await _weatherDataRepository.GetAsync(userId);
+
+            if (weatherData is null)
                 return null;
 
-            var propertyInfo = data.GetType().GetProperty(propName);
+            var propertyInfo = weatherData.GetType().GetProperty(propertyName);
 
-            if (propertyInfo is null) 
+            var pages = (List<string>)propertyInfo.GetValue(weatherData);
+
+            try
+            {
+                string page;
+
+                if (propertyInfo.Name == "hourlyArray")
+                {
+                    page = pages[index];
+                    weatherData.HourlyIndex = index;
+                }
+                else
+                {
+                    page = pages[index];
+                    weatherData.DailyIndex = index;
+                }
+
+
+                await _weatherDataRepository.UpdateAsync(weatherData);
+
+                return page;
+            }
+            catch
+            {
                 return null;
-
-            var array = (List<string>)propertyInfo.GetValue(data);
-
-            if(array is null || array.Count <= rowIndex || rowIndex < 0)
-                return null;
-
-            return array[rowIndex];
+            }
         }
 
         public async Task SetHourlyData(WeatherDataEntity weatherDataEntity)

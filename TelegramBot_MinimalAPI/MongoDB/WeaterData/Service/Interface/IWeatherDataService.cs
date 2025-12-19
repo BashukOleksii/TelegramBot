@@ -4,8 +4,8 @@ namespace TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Interface
 {
     public interface IWeatherDataService
     {
-        Task<string?> GetDate(int userIndex, int rowIndex, string propName);
         Task<WeatherDataEntity?> GetData(int userID);
         Task SetHourlyData(WeatherDataEntity weatherDataEntity);
+        Task<string?> GetPage(long userId, string propertyName, int index);
     }
 }

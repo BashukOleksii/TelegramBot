@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Http.Extensions;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography.Xml;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -11,6 +12,11 @@ using TelegramBot_MinimalAPI.GeocodingAndReverseService;
 using TelegramBot_MinimalAPI.MongoDB.Setting.Service.Interfaces;
 using TelegramBot_MinimalAPI.MongoDB.State;
 using TelegramBot_MinimalAPI.MongoDB.State.Service.Interface;
+using TelegramBot_MinimalAPI.MongoDB.WeaterData;
+using TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Interface;
+using TelegramBot_MinimalAPI.MongoDB.WeatherDataCache;
+using TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Service.Interface;
+using TelegramBot_MinimalAPI.QueryBuilderTool;
 using TelegramBot_MinimalAPI.Response;
 using TelegramBot_MinimalAPI.Setting;
 
@@ -22,6 +28,8 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
         private readonly TelegramBotClient _client;
         private readonly ISettingService _settingService;
         private readonly IStateService _stateService;
+        private readonly IWeatherCacheService _weatherCache;
+        private readonly IWeatherDataService _weatherDataService;
         private readonly GeocodingServise _geocodingService;
         private float lat = (float)50.45466, lon = (float)30.5238;
 
@@ -31,12 +39,16 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
             (TelegramBotClient client,
             ISettingService settingService,
             IStateService stateService,
+            IWeatherCacheService weatherCache,
+            IWeatherDataService weatherDataService,
             GeocodingServise geocodingServise)
         {
             _client = client;
             _settingService = settingService;
-            _geocodingService = geocodingServise;
             _stateService = stateService;
+            _weatherCache = weatherCache;
+            _weatherDataService = weatherDataService;
+            _geocodingService = geocodingServise;
         }
 
         public async Task HandleUpdate(Update update)
@@ -98,11 +110,8 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
                     case "користувацькі налаштування":
                         await HandleUserSettingButton(message);
                         break;
-                    case "загальна + поточна погода":
-                        await HandleCurrentDailyButton(message);
-                        break;
-                    case "погода за годинами":
-                        await HandleHourlyButton(message);
+                    case "погода":
+                        await HandleWeatherButton(message);
                         break;
 
 
@@ -158,8 +167,7 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
             {
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("Загальна + поточна погода"),
-                    new KeyboardButton("Погода за годинами"),
+                    new KeyboardButton("Погода")
                 },
                 new KeyboardButton[]
                 {
@@ -523,54 +531,112 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
 
         #region Погода
 
-        private async Task HandleCurrentDailyButton(Message message)
+        private async Task HandleWeatherButton(Message message)
         {
-            await _client.SendChatAction(message.Chat.Id,ChatAction.FindLocation);
-            var userSetting = await _settingService.GetSettingAsync(message.From.Id);
+            await _client.SendChatAction(message.Chat.Id, ChatAction.Typing);
 
-            var queryBuilder = new QueryBuilderTool.QueryBuilder();
+            var queryBuilder = new QueryBuilder();
+
+            var userSetting = await _settingService.GetSettingAsync(message.From!.Id);
 
             queryBuilder
-                .SetSetting(userSetting)
+                .SetSetting(userSetting!)
                 .AddType<CurentWeatherSetting>()
+                .AddType<HourlyWeatherSetting>()
                 .AddType<DailyWeatherSetting>();
 
-            using var _httpClient = new HttpClient();
+            bool needToRequest;
 
-            var response = await _httpClient.GetAsync(queryBuilder.Build());
-            var weather = await response.Content.ReadFromJsonAsync<BaseResponse>();
-            var info = weather.GetInfo(userSetting.TempUnit == null? "°C": "°F", userSetting.WindSpeed== null ? "км/год" : "м/с");
+            var responseCache = await _weatherCache.Get(message.From!.Id);
 
-            await _client.SendMessage(message.Chat.Id, info[0]);
-            await _client.SendMessage(message.Chat.Id, info[1], parseMode: ParseMode.Html);
+            string query = queryBuilder.Build();
+            BaseResponse response;
+
+            try
+            {
+                if (responseCache is null || responseCache.Key != query)
+                {
+                    using var _httpClient = new HttpClient();
+                    response = await _httpClient.GetFromJsonAsync<BaseResponse>(query);
+
+                    var cacheToSave = new WeatherCache()
+                    {
+                        UserId = message.From.Id,
+                        Key = query,
+                        Cache = response,
+                        ExpiredTime = DateTime.UtcNow.AddHours(1)
+                    };
+
+                    await _weatherCache.Send(cacheToSave);
+                }
+                else
+                    response = responseCache.Cache;
+            }
+            catch 
+            {
+                await _client.SendMessage(
+                    message.Chat!.Id,
+                    "Відбулась помилка під час запиту, спробуйте пізніше");
+
+                return;
+
+            }
+
+            var data = response!.GetInfo(userSetting!.TempUnit == null ? "°C" : "°F", userSetting.WindSpeed == null ? "км/год" : "м/с");
+
+            WeatherDataEntity weatherDataEntity = new WeatherDataEntity();
+
+            if (data["current"] is not null)
+                await _client.SendMessage(
+                    message.Chat.Id,
+                    data["current"]!
+                    );
+            if (data["daily"] is not null)
+            {
+                var dailyData = data["daily"]!.Split("_____");
+
+                weatherDataEntity.DailyArray = dailyData.ToList();
+                weatherDataEntity.DailyIndex = 0;
+
+                await _client.SendMessage(
+                    message.Chat.Id,
+                    dailyData[0],
+                    replyMarkup: SetMoveButtons(WeatherPageType.Daily)
+                    );
+
+            }
+            if (data["hourly"] is not null)
+            {
+                var hourlyData = data["hourly"]!.Split("_____");
+                
+                weatherDataEntity.HourlyArray = hourlyData.ToList();
+                weatherDataEntity.HourlyIndex = 0;
+
+                await _client.SendMessage(
+                    message.Chat.Id,
+                    hourlyData[0],
+                    replyMarkup: SetMoveButtons(WeatherPageType.Hourly)
+                    );
+
+            }
+
+            if(weatherDataEntity.DailyArray is not null ||
+                weatherDataEntity.HourlyArray is not null)
+            {
+                weatherDataEntity.UserId = message.From.Id;
+                await _weatherDataService.SetHourlyData(weatherDataEntity);
+            }
 
         }
+       
 
-        private async Task HandleHourlyButton(Message message)
+        private InlineKeyboardMarkup SetMoveButtons(WeatherPageType weatherPageType)
         {
-            await _client.SendChatAction(message.Chat.Id, ChatAction.FindLocation);
-            var userSetting = await _settingService.GetSettingAsync(message.From.Id);
-
-            var queryBuilder = new QueryBuilderTool.QueryBuilder();
-
-            queryBuilder
-                .SetSetting(userSetting)
-                .AddType<HourlyWeatherSetting>();
-
-            using var _httpClient = new HttpClient();
-
-            var response = await _httpClient.GetAsync(queryBuilder.Build());
-            var weather = await response.Content.ReadFromJsonAsync<BaseResponse>();
-            var info = weather.GetInfo(userSetting.TempUnit == null ? "°C" : "°F", userSetting.WindSpeed == null ? "км/год" : "м/с");
-
-            string[] text = info[0].Split("_____");
-
-            foreach (var t in text)
-                await _client.SendMessage(message.Chat.Id, t, parseMode: ParseMode.Html);
-
-            
-            
-            
+            return new InlineKeyboardMarkup(new[]
+            {
+                InlineKeyboardButton.WithCallbackData("⏴",callbackData:$"move_back_{weatherPageType}"),
+                InlineKeyboardButton.WithCallbackData("⏵",callbackData:$"move_forvard{weatherPageType}")
+            });
         }
         #endregion
 
