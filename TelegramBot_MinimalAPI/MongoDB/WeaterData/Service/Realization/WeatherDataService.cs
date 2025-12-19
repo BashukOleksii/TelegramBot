@@ -3,7 +3,7 @@ using TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Interface;
 
 namespace TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Realization
 {
-    public class WeatherDataService: IWeatherDataService
+    public class WeatherDataService : IWeatherDataService
     {
         private readonly IWeatherDataRepository _weatherDataRepository;
 
@@ -12,24 +12,27 @@ namespace TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Realization
             _weatherDataRepository = weatherDataRepository;
         }
 
-        public async Task<WeatherDataEntity?> GetData(int userID) =>
+        public async Task<WeatherDataEntity?> GetData(long userID) =>
             await _weatherDataRepository.GetAsync(userID);
-            
-        
 
-        public async Task<string?> GetPage(long userId,string propertyName, int index)
+
+
+        public async Task<string?> GetPage(long userId, string propertyName, int index)
         {
             var weatherData = await _weatherDataRepository.GetAsync(userId);
 
             if (weatherData is null)
                 return null;
 
-            var propertyInfo = weatherData.GetType().GetProperty(propertyName);
-
-            var pages = (List<string>)propertyInfo.GetValue(weatherData);
-
             try
             {
+
+
+                var propertyInfo = weatherData.GetType().GetProperty(propertyName);
+
+                var pages = (List<string>)propertyInfo.GetValue(weatherData);
+
+
                 string page;
 
                 if (propertyInfo.Name == "hourlyArray")

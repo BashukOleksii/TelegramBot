@@ -11,7 +11,7 @@ namespace TelegramBot_MinimalAPI.MongoDB.WeaterData
         [BsonElement("hourlyArray")] public List<string>? HourlyArray { get; set; }
         [BsonElement("hourlyIndex")] public int? HourlyIndex { get; set; }
         [BsonElement("dailyArray")] public List<string>? DailyArray { get; set; }
-        [BsonElement("dailylyIndex")] public int? DailyIndex { get; set; }
+        [BsonElement("dailyIndex")] public int? DailyIndex { get; set; }
 
     }
 }
