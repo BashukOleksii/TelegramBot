@@ -42,33 +42,36 @@ namespace TelegramBot_MinimalAPI.Response
             string date = DateTime.Parse(Time[0]).ToString("D");
 
             var stringRow = $"Погодинна погода:";
-            stringRow += $"#####({date})#####";
+            stringRow += $"\n<b>#####({date})#####</b>";
             for (int i = 0; i < Time.Count; i++)
             {
                 if(date != DateTime.Parse(Time[i]).ToString("D"))
                 {
-                    date = DateTime.Parse(Time[0]).ToString("D");
-                    stringRow += $"#####({date})#####";
+                    stringRow += "_____";
+                    date = DateTime.Parse(Time[i]).ToString("D");
+                    stringRow += $"<b>#####({date})#####</b>";
                 }
 
+                stringRow += $"\n<b>*****{DateTime.Parse(Time[i]).ToString("t")}:</b>";
+
                 if (Temperature is not null)
-                    stringRow += $"\n\tТемпература повітря: {Temperature[i]} {tempUnit}";
+                    stringRow += $"\n\t-Температура повітря: {Temperature[i]} {tempUnit}";
                 if (PrecipitationProbality is not null)
-                    stringRow += $"\n\tЙмовірність дощу {PrecipitationProbality[i]} %";
+                    stringRow += $"\n\t -Ймовірність дощу {PrecipitationProbality[i]} %";
                 if (RelativeHumidity is not null)
-                    stringRow += $"\n\tВідносна вологість: {RelativeHumidity[i]} %";
+                    stringRow += $"\n\t -Відносна вологість: {RelativeHumidity[i]} %";
                 if (WindSpeed is not null)
-                    stringRow += $"\n\tШвидкість вітру: {WindSpeed[i]} {speedUnit}";
+                    stringRow += $"\n\t -Швидкість вітру: {WindSpeed[i]} {speedUnit}";
                 if (WindDirection is not null)
-                    stringRow += $"\n\tНапрямок вітру: {Direction.GetDirectionFromNumber(WindDirection[i])}";
+                    stringRow += $"\n\t -Напрямок вітру: {Direction.GetDirectionFromNumber(WindDirection[i])}";
                 if (WindGusts is not null)
-                    stringRow += $"\n\tПориви вітру: {WindGusts[i]} {speedUnit}";
+                    stringRow += $"\n\t -Пориви вітру: {WindGusts[i]} {speedUnit}";
                 if (DewPoint is not null)
-                    stringRow += $"\n\tТочка роси: {DewPoint[i]} {tempUnit}";
+                    stringRow += $"\n\t -Точка роси: {DewPoint[i]} {tempUnit}";
                 if (Visibility is not null)
-                    stringRow += $"\n\tВидимість: {Visibility[i]} м";
+                    stringRow += $"\n\t -Видимість: {Visibility[i]} м";
                 if (CloudCover is not null)
-                    stringRow += $"\n\tВідсоток хмар на небі: {CloudCover[i]}";
+                    stringRow += $"\n\t -Відсоток хмар на небі: {CloudCover[i]}";
             }
 
             return stringRow;

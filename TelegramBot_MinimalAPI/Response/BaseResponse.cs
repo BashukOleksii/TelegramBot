@@ -13,18 +13,15 @@ namespace TelegramBot_MinimalAPI.Response
         [JsonPropertyName("daily")]
         public DailyWeatherResponse? DailyWeather { get; set; }
 
-        public List<string> GetInfo(string tempUnit, string speedUnit)
+        public Dictionary<string,string?> GetInfo(string tempUnit, string speedUnit)
         {
-            var info = new List<string>();
+            var data = new Dictionary<string, string?>();
 
-            if (CurentWeather is not null)
-                info.Add(CurentWeather.GetInfo(tempUnit, speedUnit));
-            if (HourlyWeather is not null)
-                info.Add(HourlyWeather.GetInfo(tempUnit, speedUnit));
-            if (DailyWeather is not null)
-                info.Add(DailyWeather.GetInfo(tempUnit, speedUnit));
+            data["current"] = CurentWeather == null? null : CurentWeather.GetInfo(tempUnit, speedUnit);
+            data["hourly"] = HourlyWeather == null ? null : HourlyWeather.GetInfo(tempUnit, speedUnit);
+            data["daily"] = DailyWeather == null ? null : DailyWeather.GetInfo(tempUnit, speedUnit);
 
-            return info;
+            return data;
         }
     }
 }

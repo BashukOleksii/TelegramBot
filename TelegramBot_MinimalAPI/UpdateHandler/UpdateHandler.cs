@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http.Extensions;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
@@ -67,7 +68,7 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
 
             if (message.Text is not null)
             {
-                if(message.Text.EndsWith("погода")&& !message.Text.StartsWith("Загальна"))
+                if(message.Text.EndsWith("погода")&& !message.Text.StartsWith("Загальна") )
                     await HandleWeatherEnableSettingButton(message);
 
                 switch (message.Text!.ToLower())
@@ -100,7 +101,11 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
                     case "загальна + поточна погода":
                         await HandleCurrentDailyButton(message);
                         break;
-                    
+                    case "погода за годинами":
+                        await HandleHourlyButton(message);
+                        break;
+
+
 
                     default:
                         await SetLocationFromName(message);
@@ -154,7 +159,7 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
                 new KeyboardButton[]
                 {
                     new KeyboardButton("Загальна + поточна погода"),
-                    new KeyboardButton("Погодинна погода"),
+                    new KeyboardButton("Погода за годинами"),
                 },
                 new KeyboardButton[]
                 {
@@ -180,14 +185,17 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
                 setting.Latitude = lat;
                 setting.Longtitude = lon;
                 await _settingService.Update(setting);
-                await HandleSettingButton(message.Chat.Id);
             }
             else
                 await SetMainButtons(message.Chat.Id);
 
 
             await _client.SendMessage(message.Chat.Id, "Встановлено відстеження погоди для міста Київ");
-            
+
+            if(!first)
+                await HandleSettingButton(message.Chat.Id);
+
+
         }
         private async Task SetLocationFromMessage(Message message)
         {
@@ -202,7 +210,6 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
                 userSetting.Latitude = latitude;
                 userSetting.Longtitude = longtitude;
                 await _settingService.Update(userSetting);
-                await HandleSettingButton(message.Chat.Id);
             }
             else
                 await SetMainButtons(message.Chat.Id);
@@ -210,6 +217,10 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
             var locationName = await _geocodingService.GetNameAsync(userSetting.Latitude, userSetting.Longtitude);
 
             await _client.SendMessage(message.Chat.Id, $"Встановлено місце відстеження: {locationName}");
+
+            if(!first)
+                await HandleSettingButton(message.Chat.Id);
+
 
         }
         private async Task SetLocationFromName(Message message)
@@ -233,7 +244,6 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
                 userSetting.Latitude = location.Latitude;
                 userSetting.Longtitude = location.Longitude;
                 await _settingService.Update(userSetting);
-                await HandleSettingButton(message.Chat.Id);
             }
             else
                 await SetMainButtons(message.Chat.Id);
@@ -243,6 +253,9 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
 
             await _client.SendMessage(message.Chat.Id, $"Встановлено місце відстеження {locationName}");
             await _stateService.SetState(message.From.Id, UserStates.None);
+
+            if(!firstSetting)
+                await HandleSettingButton(message.Chat.Id);
         }
 
         #endregion
@@ -524,8 +537,6 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
 
             using var _httpClient = new HttpClient();
 
-            Console.WriteLine($"URL: {queryBuilder.Build()}");
-
             var response = await _httpClient.GetAsync(queryBuilder.Build());
             var weather = await response.Content.ReadFromJsonAsync<BaseResponse>();
             var info = weather.GetInfo(userSetting.TempUnit == null? "°C": "°F", userSetting.WindSpeed== null ? "км/год" : "м/с");
@@ -533,6 +544,33 @@ namespace TelegramBot_MinimalAPI.UpdateHandler
             await _client.SendMessage(message.Chat.Id, info[0]);
             await _client.SendMessage(message.Chat.Id, info[1], parseMode: ParseMode.Html);
 
+        }
+
+        private async Task HandleHourlyButton(Message message)
+        {
+            await _client.SendChatAction(message.Chat.Id, ChatAction.FindLocation);
+            var userSetting = await _settingService.GetSettingAsync(message.From.Id);
+
+            var queryBuilder = new QueryBuilderTool.QueryBuilder();
+
+            queryBuilder
+                .SetSetting(userSetting)
+                .AddType<HourlyWeatherSetting>();
+
+            using var _httpClient = new HttpClient();
+
+            var response = await _httpClient.GetAsync(queryBuilder.Build());
+            var weather = await response.Content.ReadFromJsonAsync<BaseResponse>();
+            var info = weather.GetInfo(userSetting.TempUnit == null ? "°C" : "°F", userSetting.WindSpeed == null ? "км/год" : "м/с");
+
+            string[] text = info[0].Split("_____");
+
+            foreach (var t in text)
+                await _client.SendMessage(message.Chat.Id, t, parseMode: ParseMode.Html);
+
+            
+            
+            
         }
         #endregion
 

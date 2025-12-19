@@ -87,6 +87,9 @@ namespace TelegramBot_MinimalAPI.Response
                 if (SnowdallSum is not null)
                     stringRow += $"\n\t- Кількість опадів від снігу: {SnowdallSum[i]} мм";
 
+                if (i < Time.Count - 1)
+                    stringRow += "_____";
+
             }
 
             return stringRow;

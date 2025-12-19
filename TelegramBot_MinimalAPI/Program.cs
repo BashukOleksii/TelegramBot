@@ -10,6 +10,7 @@ using TelegramBot_MinimalAPI.MongoDB.State.Repository.Interface;
 using TelegramBot_MinimalAPI.MongoDB.State.Repository.Realization;
 using TelegramBot_MinimalAPI.MongoDB.State.Service.Interface;
 using TelegramBot_MinimalAPI.MongoDB.State.Service.Realization;
+using TelegramBot_MinimalAPI.MongoDB.WeaterData.Repository.Interface;
 using TelegramBot_MinimalAPI.UpdateHandler;
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +42,8 @@ builder.Services.AddSingleton<ISettingRepository, SettingRepository>();
 builder.Services.AddSingleton<ISettingService, SettingService>();
 builder.Services.AddSingleton<IStateRepository, StateRepository>();
 builder.Services.AddSingleton<IStateService, StateService>();
+builder.Services.AddSingleton<IWeatherDataRepository, IWeatherDataRepository>();
+
 #endregion
 
 #region UpdateHandler

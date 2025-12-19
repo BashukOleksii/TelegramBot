@@ -47,15 +47,15 @@ namespace TelegramBot_MinimalAPI.QueryBuilderTool
             if(string.IsNullOrEmpty(url))
                 throw new ArgumentNullException("url пустий, потрібно встановити налашування");
 
+            string type;
             if (typeof(T) == typeof(CurentWeatherSetting))
-                url += "&current=";
+                type= "&current=";
             else if (typeof(T) == typeof(HourlyWeatherSetting))
-                url += "&hourly=";
+                type= "&hourly=";
             else if (typeof(T) == typeof(DailyWeatherSetting))
-                url += "&daily=";
+                type = "&daily=";
             else
                 throw new ArgumentException("Не правильно передане значення");
-
 
             var settingBase = typeof(BaseSetting).
                 GetProperties().FirstOrDefault(p => p.PropertyType == typeof(T));
@@ -64,7 +64,9 @@ namespace TelegramBot_MinimalAPI.QueryBuilderTool
 
             var paramentrs = needSetting.GetType().GetProperties().Where(p => (bool)p.GetValue(needSetting)! == true);
 
-            url += string.Join(',', paramentrs.Select(p => p.GetCustomAttribute<BsonElementAttribute>()!.ElementName));
+            if (paramentrs.Any())
+                url += type + string.Join(',', paramentrs.Select(p => p.GetCustomAttribute<BsonElementAttribute>()!.ElementName));
+            
     
             return this;
         }
