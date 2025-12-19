@@ -11,7 +11,15 @@ using TelegramBot_MinimalAPI.MongoDB.State.Repository.Realization;
 using TelegramBot_MinimalAPI.MongoDB.State.Service.Interface;
 using TelegramBot_MinimalAPI.MongoDB.State.Service.Realization;
 using TelegramBot_MinimalAPI.MongoDB.WeaterData.Repository.Interface;
+using TelegramBot_MinimalAPI.MongoDB.WeaterData.Repository.Realization;
+using TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Interface;
+using TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Realization;
+using TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Repository.Interface;
+using TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Repository.Realization;
+using TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Service.Interface;
+using TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Service.Realization;
 using TelegramBot_MinimalAPI.UpdateHandler;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
@@ -42,7 +50,10 @@ builder.Services.AddSingleton<ISettingRepository, SettingRepository>();
 builder.Services.AddSingleton<ISettingService, SettingService>();
 builder.Services.AddSingleton<IStateRepository, StateRepository>();
 builder.Services.AddSingleton<IStateService, StateService>();
-builder.Services.AddSingleton<IWeatherDataRepository, IWeatherDataRepository>();
+builder.Services.AddSingleton<IWeatherDataRepository, WeatherDataRepository>();
+builder.Services.AddSingleton<IWeatherDataService, WeatherDataService>();
+builder.Services.AddSingleton<IWeatherCacheRepository, WeatherCacheRepository>();
+builder.Services.AddSingleton<IWeatherCacheService, WeatherCacheService>();
 
 #endregion
 

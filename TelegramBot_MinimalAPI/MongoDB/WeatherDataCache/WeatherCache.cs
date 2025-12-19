@@ -8,8 +8,11 @@ namespace TelegramBot_MinimalAPI.MongoDB.WeatherDataCache
     {
         [BsonRepresentation(BsonType.ObjectId)] public string _id;
         [BsonElement("userId")] public long UserId { get; set; }
-        [BsonElement("key")] string Key { get; set; }
-        [BsonElement("response")] BaseResponse Response { get; set; }
-        [BsonRepresentation(BsonType.String)][BsonElement("expiredTime")] DateTime ExpiredTime { get; set; } 
+        [BsonElement("key")] public string Key { get; set; }
+        [BsonElement("response")] public BaseResponse Cache { get; set; }
+
+
+        [BsonDateTimeOptions(Kind = DateTimeKind.Utc)][BsonElement("expiredTime")] 
+        public DateTime ExpiredTime { get; set; } 
     }
 }

@@ -10,6 +10,12 @@ namespace TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Repository.Realization
         public WeatherCacheRepository(IMongoDatabase mongoDatabase)
         {
             _collection = mongoDatabase.GetCollection<WeatherCache>("WeatherCache");
+
+            var indexKeyDefinition = Builders<WeatherCache>.IndexKeys.Ascending(e => e.ExpiredTime);
+            var indexOption = new CreateIndexOptions { ExpireAfter = TimeSpan.Zero };
+            var indexModel = new CreateIndexModel<WeatherCache>(indexKeyDefinition, indexOption);
+
+             _collection.Indexes.CreateOneAsync(indexModel).Wait();
         }
 
         public async Task CreateAsync(WeatherCache weatherCache) =>
