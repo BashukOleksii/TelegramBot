@@ -1,4 +1,4 @@
-﻿namespace TelegramBot_MinimalAPI
+﻿namespace TelegramBot_MinimalAPI.UpdateHandler
 {
     public enum WeatherPageType
     {

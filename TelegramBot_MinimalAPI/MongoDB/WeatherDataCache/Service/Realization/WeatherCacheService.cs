@@ -14,17 +14,23 @@ namespace TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Service.Realization
 
         public async Task<WeatherCache?> Get(long userId) =>
             await _cacheRepository.GetAsync(userId);
-        
+
 
         public async Task Send(WeatherCache weatherCache)
         {
             var cache = await _cacheRepository.GetAsync(weatherCache.UserId);
 
-            if (cache is null)
+            if(cache is null)
                 await _cacheRepository.CreateAsync(weatherCache);
             else
+            {
+                weatherCache._id = cache._id;
                 await _cacheRepository.UpdateAsync(weatherCache);
-
+            }
         }
+
+
+
+
     }
 }

@@ -34,7 +34,12 @@ Console.WriteLine(builder.Environment.EnvironmentName);
 var botToken = builder.Configuration["Telegram:BotToken"]; //Environment.GetEnvironmentVariable("BOT_TOKEN");
 if (string.IsNullOrWhiteSpace(botToken))
     throw new Exception("Токен не отриманий");
-builder.Services.AddSingleton(new TelegramBotClient(botToken));
+var telegramBot = new TelegramBotClient(botToken);
+await telegramBot.SetMyCommands(new[]
+{
+    new BotCommand("start","Початок роботи")
+});
+builder.Services.AddSingleton(telegramBot);
 #endregion
 
 #region MongoDB
@@ -69,6 +74,8 @@ builder.Services.AddHttpClient<GeocodingServise>(client =>
 #endregion
 
 #endregion
+
+
 
 var app = builder.Build();
 

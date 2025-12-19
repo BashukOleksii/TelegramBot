@@ -35,7 +35,7 @@ namespace TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Realization
 
                 string page;
 
-                if (propertyInfo.Name == "hourlyArray")
+                if (propertyInfo.Name == "HourlyArray")
                 {
                     page = pages[index];
                     weatherData.HourlyIndex = index;
@@ -62,9 +62,11 @@ namespace TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Realization
             var data = await _weatherDataRepository.GetAsync(weatherDataEntity.UserId);
 
             if (data is null)
+                await _weatherDataRepository.CreateAsync(weatherDataEntity);
+            else {
+                weatherDataEntity._id = data._id;
                 await _weatherDataRepository.UpdateAsync(weatherDataEntity);
-            else
-                await _weatherDataRepository.UpdateAsync(weatherDataEntity);
+            }
         }
     }
 }
