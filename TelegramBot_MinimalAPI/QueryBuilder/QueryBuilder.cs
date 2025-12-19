@@ -1,9 +1,10 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using System.Globalization;
 using System.Reflection;
 using TelegramBot_MinimalAPI.Setting;
 
-namespace TelegramBot_MinimalAPI.QueryBuilder
+namespace TelegramBot_MinimalAPI.QueryBuilderTool
 {
     public class QueryBuilder
     {
@@ -22,6 +23,9 @@ namespace TelegramBot_MinimalAPI.QueryBuilder
             {
                 if (IsClass(property.PropertyType))
                     continue;
+                
+                if (property.Name == "_id")
+                    continue;
 
                 var value = property.GetValue(_userSetting);
 
@@ -30,28 +34,28 @@ namespace TelegramBot_MinimalAPI.QueryBuilder
 
                 var key = property.GetCustomAttribute<BsonElementAttribute>()!.ElementName;
 
-                queries[key] = value.ToString();
+                queries[key] = Convert.ToString(value,CultureInfo.InvariantCulture);
             }
 
             url = baseUrl + string.Join('&', queries.Select(d => $"{d.Key}={d.Value}"));
 
             return this;
         }
-
+            
         public QueryBuilder AddType<T>()
         {
             if(string.IsNullOrEmpty(url))
                 throw new ArgumentNullException("url пустий, потрібно встановити налашування");
 
+            string type;
             if (typeof(T) == typeof(CurentWeatherSetting))
-                url += "&current=";
+                type= "&current=";
             else if (typeof(T) == typeof(HourlyWeatherSetting))
-                url += "&hourly=";
+                type= "&hourly=";
             else if (typeof(T) == typeof(DailyWeatherSetting))
-                url += "&daily=";
+                type = "&daily=";
             else
                 throw new ArgumentException("Не правильно передане значення");
-
 
             var settingBase = typeof(BaseSetting).
                 GetProperties().FirstOrDefault(p => p.PropertyType == typeof(T));
@@ -60,7 +64,9 @@ namespace TelegramBot_MinimalAPI.QueryBuilder
 
             var paramentrs = needSetting.GetType().GetProperties().Where(p => (bool)p.GetValue(needSetting)! == true);
 
-            url += string.Join(',', paramentrs.Select(p => p.GetCustomAttribute<BsonElementAttribute>()!.ElementName));
+            if (paramentrs.Any())
+                url += type + string.Join(',', paramentrs.Select(p => p.GetCustomAttribute<BsonElementAttribute>()!.ElementName));
+            
     
             return this;
         }

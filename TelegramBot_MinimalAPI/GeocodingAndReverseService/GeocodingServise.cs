@@ -34,7 +34,6 @@ namespace TelegramBot_MinimalAPI.GeocodingAndReverseService
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
                 return null;
             }
         }

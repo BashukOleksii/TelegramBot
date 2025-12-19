@@ -1,7 +1,6 @@
 using MongoDB.Driver;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using TelegramBot_MinimalAPI;
 using TelegramBot_MinimalAPI.GeocodingAndReverseService;
 using TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Interfaces;
 using TelegramBot_MinimalAPI.MongoDB.Setting.Repository.Realizations;
@@ -11,6 +10,16 @@ using TelegramBot_MinimalAPI.MongoDB.State.Repository.Interface;
 using TelegramBot_MinimalAPI.MongoDB.State.Repository.Realization;
 using TelegramBot_MinimalAPI.MongoDB.State.Service.Interface;
 using TelegramBot_MinimalAPI.MongoDB.State.Service.Realization;
+using TelegramBot_MinimalAPI.MongoDB.WeaterData.Repository.Interface;
+using TelegramBot_MinimalAPI.MongoDB.WeaterData.Repository.Realization;
+using TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Interface;
+using TelegramBot_MinimalAPI.MongoDB.WeaterData.Service.Realization;
+using TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Repository.Interface;
+using TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Repository.Realization;
+using TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Service.Interface;
+using TelegramBot_MinimalAPI.MongoDB.WeatherDataCache.Service.Realization;
+using TelegramBot_MinimalAPI.UpdateHandler;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
@@ -25,7 +34,12 @@ Console.WriteLine(builder.Environment.EnvironmentName);
 var botToken = builder.Configuration["Telegram:BotToken"]; //Environment.GetEnvironmentVariable("BOT_TOKEN");
 if (string.IsNullOrWhiteSpace(botToken))
     throw new Exception("Токен не отриманий");
-builder.Services.AddSingleton(new TelegramBotClient(botToken));
+var telegramBot = new TelegramBotClient(botToken);
+await telegramBot.SetMyCommands(new[]
+{
+    new BotCommand("start","Початок роботи")
+});
+builder.Services.AddSingleton(telegramBot);
 #endregion
 
 #region MongoDB
@@ -41,6 +55,11 @@ builder.Services.AddSingleton<ISettingRepository, SettingRepository>();
 builder.Services.AddSingleton<ISettingService, SettingService>();
 builder.Services.AddSingleton<IStateRepository, StateRepository>();
 builder.Services.AddSingleton<IStateService, StateService>();
+builder.Services.AddSingleton<IWeatherDataRepository, WeatherDataRepository>();
+builder.Services.AddSingleton<IWeatherDataService, WeatherDataService>();
+builder.Services.AddSingleton<IWeatherCacheRepository, WeatherCacheRepository>();
+builder.Services.AddSingleton<IWeatherCacheService, WeatherCacheService>();
+
 #endregion
 
 #region UpdateHandler
@@ -55,6 +74,8 @@ builder.Services.AddHttpClient<GeocodingServise>(client =>
 #endregion
 
 #endregion
+
+
 
 var app = builder.Build();
 
