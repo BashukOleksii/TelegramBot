@@ -33,11 +33,11 @@ Console.WriteLine(builder.Environment.EnvironmentName);
 #region BotToken
 var botToken = builder.Configuration["Telegram:BotToken"]; //Environment.GetEnvironmentVariable("BOT_TOKEN");
 if (string.IsNullOrWhiteSpace(botToken))
-    throw new Exception("Токен не отриманий");
+    throw new Exception("Г’Г®ГЄГҐГ­ Г­ГҐ Г®ГІГ°ГЁГ¬Г Г­ГЁГ©");
 var telegramBot = new TelegramBotClient(botToken);
 await telegramBot.SetMyCommands(new[]
 {
-    new BotCommand("start","Початок роботи")
+    new BotCommand("start","ГЏГ®Г·Г ГІГ®ГЄ Г°Г®ГЎГ®ГІГЁ")
 });
 builder.Services.AddSingleton(telegramBot);
 #endregion
@@ -79,7 +79,7 @@ builder.Services.AddHttpClient<GeocodingServise>(client =>
 
 var app = builder.Build();
 
-//var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+//var port = Environment.GetEnvironmentVariable("PORT") ?? "8000";
 //app.Urls.Add($"http://0.0.0.0:{port}");
 
 app.MapPost("/telegram/update", async (Update update, UpdateHandler updateHandler) =>
