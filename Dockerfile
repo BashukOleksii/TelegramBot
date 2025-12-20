@@ -19,8 +19,8 @@ WORKDIR /app
 # 7. Копіюємо зібраний застосунок
 COPY --from=build /app/out .
 
-ENV ASPNETCORE_URLS=http://+:8000
-EXPOSE 8000
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
 
 # 9. Команда запуску програми
 ENTRYPOINT ["dotnet", "TelegramBot_MinimalAPI.dll"]
