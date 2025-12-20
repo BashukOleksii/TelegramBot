@@ -79,8 +79,8 @@ builder.Services.AddHttpClient<GeocodingServise>(client =>
 
 var app = builder.Build();
 
-//var port = Environment.GetEnvironmentVariable("PORT") ?? "8000";
-//app.Urls.Add($"http://0.0.0.0:{port}");
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8000";
+app.Urls.Add($"http://0.0.0.0:{port}");
 
 app.MapPost("/telegram/update", async (Update update, UpdateHandler updateHandler) =>
 {
