@@ -1,12 +1,26 @@
-# Етап збірки (SDK)
+# 1. Беремо образ з .NET SDK (для збірки)
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["TelegramBot_MinimalAPI.csproj", "./"]
-RUN dotnet restore "TelegramBot_MinimalAPI.csproj"
-COPY . .
-RUN dotnet publish "TelegramBot_MinimalAPI.csproj" -c Release -o /app/publish
-# Етап запуску (Runtime)
-FROM mcr.microsoft.com/dotnet/runtime:8.0
+
+# 2. Робоча папка всередині контейнера
 WORKDIR /app
-COPY --from=build /app/publish .
+
+# 3. Копіюємо ВЕСЬ проєкт у контейнер
+COPY . .
+
+# 4. Збираємо і публікуємо застосунок
+RUN dotnet publish -c Release -o out
+
+# 5. Беремо легкий runtime образ
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+
+# 6. Робоча папка для запуску
+WORKDIR /app
+
+# 7. Копіюємо зібраний застосунок
+COPY --from=build /app/out .
+
+# 8. Вказуємо порт (Render очікує 8080)
+EXPOSE 8080
+
+# 9. Команда запуску програми
 ENTRYPOINT ["dotnet", "TelegramBot_MinimalAPI.dll"]
