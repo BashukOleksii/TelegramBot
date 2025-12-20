@@ -37,7 +37,7 @@ if (string.IsNullOrWhiteSpace(botToken))
 var telegramBot = new TelegramBotClient(botToken);
 await telegramBot.SetMyCommands(new[]
 {
-    new BotCommand("start","Почати")
+    new BotCommand("start","Start command")
 });
 builder.Services.AddSingleton(telegramBot);
 #endregion
