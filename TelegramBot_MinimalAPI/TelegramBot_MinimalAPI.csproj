@@ -7,7 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MongoDB.Driver" Version="3.5.2" />
     <PackageReference Include="Telegram.Bot" Version="22.7.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="appsetings.Development.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
